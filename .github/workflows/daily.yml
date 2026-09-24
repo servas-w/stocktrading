@@ -1,9 +1,9 @@
 name: Daily portfolio watchlist
 
+# Manual only. Robinhood no longer offers authenticator-app 2FA, so unattended
+# robin_stocks logins aren't reliable. The daily job now runs as a Claude routine
+# using the Robinhood + Gmail connectors; see ROUTINE.md.
 on:
-  schedule:
-    # 12:00 UTC = 19:00 Da Nang (UTC+7) = 08:00 New York (EDT), before the US open
-    - cron: "0 12 * * 1-5"
   workflow_dispatch:
     inputs:
       dry_run:

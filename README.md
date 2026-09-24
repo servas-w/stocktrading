@@ -1,5 +1,7 @@
 # Robinhood Portfolio Watchlist Bot
 
+> **Current setup:** the daily job runs as a **Claude routine** that uses the Robinhood and Gmail connectors, on weekdays at 12:00 UTC (19:00 Da Nang). The prompt it runs is in [`ROUTINE.md`](ROUTINE.md). Robinhood dropped authenticator-app 2FA, so the self-hosted Python version below can no longer log in unattended. It stays here as a manual/local fallback, and its GitHub schedule is turned off.
+
 Runs once a day and:
 
 1. **Reads your open Robinhood positions**: stocks, plus the underlying of every open option position (short puts, credit spreads, etc.).
