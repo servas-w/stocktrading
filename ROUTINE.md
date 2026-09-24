@@ -33,18 +33,34 @@ You are running Wilson's daily portfolio watchlist job. Wilson set this routine 
 - `remove_from_watchlist` with the current list minus the watch set, covering both closed positions and ones now below the threshold.
 
 **Step 4: Material news, for each ticker in the watch set**
-- `get_equity_news` (limit 5, since the articles come back with full text; page further only if all 5 are inside the window). Keep only articles published inside the window. Many results are multi-ticker roundups ("stocks moving premarket", "whale alerts"). Only count one if it gives a specific cause for this ticker's move.
-- There are about 50 tickers, so work through them steadily and don't quote article bodies back.
-- `get_sec_filing_index` for filings made inside the window, where available.
+- Skip broad index ETFs (QQQ, SGOV, SCHX, SCHA, FNDA, FNDX, VOOG) for company news.
+- `get_equity_news` (limit 3; use limit 2 for mega-caps, whose articles are long). Keep only articles published inside the window. Many results are multi-ticker roundups ("stocks moving premarket", "whale alerts"). Only count one if it gives a specific cause for this ticker's move.
+- `get_sec_filing_index` (since = window start) for the non-mega-cap names. For any 8-K or offering filing, try `get_sec_filing` to read it. If the text isn't available, say so and link to EDGAR.
 - Judge materiality as a short-premium options seller would: would this plausibly move the stock, IV or assignment risk?
-  - ALERT: FDA actions (approval, CRL, PDUFA date, AdComm, clinical hold, RTF), trial readouts or endpoint misses, offerings/ATM/S-3/424B/pre-funded warrants/convertibles/reverse splits, M&A or strategic alternatives, guidance changes, earnings (with the key numbers), CEO/CFO changes, going concern, bankruptcy, delisting notices, restatements or material weakness, SEC/DOJ actions, trading halts, short-seller reports, activist 13D, dividend cuts, major contract wins or losses, rating changes from major banks.
-  - SKIP: listicles ("stocks to watch"), generic market recaps, price-move-only stories with no cause, routine Form 4s under $1M, promotional pieces, duplicates of the same event (keep the best source).
+  - ALERT: FDA actions (approval, CRL, PDUFA date, AdComm, clinical hold, RTF), trial readouts or endpoint misses, offerings/ATM/S-3/424B/pre-funded warrants/convertibles/reverse splits, M&A or strategic alternatives, guidance changes, earnings (with the key numbers), CEO/CFO changes, going concern, bankruptcy, delisting notices, restatements or material weakness, SEC/DOJ actions, trading halts, short-seller reports, activist 13D, dividend cuts, major contract wins or losses, rating changes from major banks, insider sales over $1M.
+  - SKIP: listicles ("stocks to watch"), generic market recaps, price-move-only stories with no cause, promotional pieces, duplicates of the same event (keep the best source).
 
-**Step 5: Email the digest (always send, even if nothing is material)**
+**Step 5: Book risk (every short option leg, news or not)**
+- Collect every short leg's option_id from Step 1. Call `get_option_instruments` with `ids` (comma-separated, up to ~55 per call) to get strike, type and expiry. Get spot prices from `get_equity_quotes`. Use the long legs to identify the structure: a same-expiry long put below a short put is a put spread; a short call against ≥100 shares per contract is a covered call; a same-strike long in a later month is a calendar.
+- For each short leg compute: moneyness % (puts: (spot−K)/spot; calls: (K−spot)/spot; negative means ITM), DTE, breakeven (puts K − credit/100; calls K + credit/100), assignment notional (K × 100 × qty), and max loss for spreads (width × 100 − net credit).
+- **Flag** a leg if it is ITM, within 5% of the strike, or expiring within 7 days.
+
+**Step 6: Analysis for each material item and each flagged leg**
+Write tight commentary, using numbers, not adjectives:
+- **Your position:** the structure, strikes, expiry, credit, spot, cushion %, DTE, breakeven and assignment or max-loss dollars.
+- **Read-through:** what the news means for the thesis (e.g. analyst price target vs your strike, dilution math, what a filing implies, sector or macro driver). Separate signal from noise.
+- **Next dates:** earnings, PDUFA/AdComm, trial readouts, ex-dividend, Nasdaq $1 minimum-bid clock, expiry. Only state a date as fact if a source gave it; otherwise say "check whether earnings land before expiry".
+- **To consider:** hold / roll down-and-out for a credit / close / take assignment (with effective cost basis) / hedge / write more covered calls. End with a one-line **Lean**. These are points to weigh; never place orders.
+- For a clinical-stage biotech with a binary or dilution event, note that it warrants a full cash-floor and dilution audit. For a dislocated large-cap, note that it's a candidate for the put-overreaction screen.
+
+**Step 7: Email the digest (always send, even if nothing is material)**
 Use `send_message` with an HTML body.
-- Subject: `Portfolio watchlist — YYYY-MM-DD — N material items` (N = 0 is fine).
+- Subject: `Portfolio watchlist — YYYY-MM-DD — N material items`, plus ` · K flagged` if any legs are flagged.
 - Body, in this order:
-  1. A line on positions: "Tracking K tickers: …". Then "Added: …" and "Removed: …" if any, each with the reason (new short option, crossed $5k, closed, fell below $4k).
-  2. Material news, grouped by ticker, most severe first. For each item: **[Category]** a one-line headline, then a one-sentence "why it matters" for a put seller (such as dilution, a binary event date, or a guidance cut), the source, the date and a link.
-  3. If nothing qualifies: "No material news in the last 24h."
+  1. **Today's take:** a shaded box with the 3–5 things that need attention, most urgent first (ITM or expiring legs, then material news).
+  2. A line on positions: "Tracking K tickers". Then "Added: …" and "Removed: …" if any, each with the reason (new short option, crossed $5k, closed, fell below $4k). List "Could not watch" symbols if any.
+  3. **Material news + analysis:** per ticker, most severe first: **[Category]** headline, source, date and link, then the Step 6 commentary.
+  4. **Book risk table:** leg, spot, moneyness (red if ITM, amber if within 5%), DTE, breakeven, note. Then one line on the largest position that isn't flagged.
+  5. **Macro backdrop:** 1–2 lines (rates, Fed odds, index moves, crypto) and what they mean for the book.
+  6. Footer: "These are points to weigh, not orders."
 - Keep it scannable, with no preamble.
