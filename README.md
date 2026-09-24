@@ -1,6 +1,6 @@
 # Robinhood Portfolio Watchlist Bot
 
-> **Current setup:** the daily job runs as a **Claude routine** that uses the Robinhood and Gmail connectors, on weekdays at 12:00 UTC (19:00 Da Nang). The prompt it runs is in [`ROUTINE.md`](ROUTINE.md). Robinhood dropped authenticator-app 2FA, so the self-hosted Python version below can no longer log in unattended. It stays here as a manual/local fallback, and its GitHub schedule is turned off.
+> **Current setup:** two Claude routines run in the setup session: the **morning trade audit** (Tue–Sat 02:00 UTC / 09:00 Da Nang, [`ROUTINE-morning.md`](ROUTINE-morning.md)) and the **daily watchlist digest**, which runs as a **Claude routine** that uses the Robinhood and Gmail connectors, on weekdays at 12:00 UTC (19:00 Da Nang). The prompt it runs is in [`ROUTINE.md`](ROUTINE.md). Robinhood dropped authenticator-app 2FA, so the self-hosted Python version below can no longer log in unattended. It stays here as a manual/local fallback, and its GitHub schedule is turned off.
 
 Runs once a day and:
 
