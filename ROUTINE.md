@@ -1,6 +1,6 @@
 # Daily Portfolio Watchlist — Claude routine prompt
 
-This is the exact prompt the scheduled Claude routine runs (weekdays 12:00 UTC = 19:00 Da Nang = 08:00 New York).
+This is the exact prompt the scheduled Claude routine runs (weekdays 12:00 UTC = 19:00 Da Nang = 08:00 New York). The routine fires into the original setup session, because routines that start a fresh session each time do not get the account's connectors.
 It uses the Robinhood and Gmail connectors, so no Robinhood password or 2FA key is stored anywhere.
 If you edit this file, update the routine's prompt to match.
 
