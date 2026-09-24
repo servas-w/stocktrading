@@ -1,0 +1,65 @@
+name: Daily portfolio watchlist
+
+on:
+  schedule:
+    # 12:00 UTC = 19:00 Da Nang (UTC+7) = 08:00 New York (EDT), before the US open
+    - cron: "0 12 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (no watchlist writes / notifications)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: watchlist-bot
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      # State (tracked tickers + already-sent news ids) lives in the Actions cache,
+      # not in git, so your holdings never land in the repo history.
+      - name: Restore state
+        uses: actions/cache/restore@v4
+        with:
+          path: state
+          key: watchlist-state-${{ github.run_id }}
+          restore-keys: watchlist-state-
+
+      - name: Run
+        env:
+          RH_USERNAME: ${{ secrets.RH_USERNAME }}
+          RH_PASSWORD: ${{ secrets.RH_PASSWORD }}
+          RH_TOTP_SECRET: ${{ secrets.RH_TOTP_SECRET }}
+          RH_WATCHLIST_NAME: ${{ vars.RH_WATCHLIST_NAME || 'Portfolio' }}
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+          SEC_USER_AGENT: ${{ vars.SEC_USER_AGENT }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT || '587' }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          MIN_MATERIALITY: ${{ vars.MIN_MATERIALITY || '3' }}
+        run: python -m watchlist_bot ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      - name: Save state
+        if: success()
+        uses: actions/cache/save@v4
+        with:
+          path: state
+          key: watchlist-state-${{ github.run_id }}
+
