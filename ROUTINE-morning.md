@@ -15,12 +15,12 @@ Morning trade audit: audit Wilson's new positions from the last US session and e
 **Step 1: Fills**
 - `get_option_orders` (state=filled, created_at_gte = 10 days ago, all pages) and `get_equity_orders` (state=filled, same window). Keep executions whose `trade_date` = last session.
 - Classify each fill: **opening** (position_effect=open, or a stock buy or sell_short) vs **closing**. Group multi-leg orders (spreads, calendars) by order.
-- If there are no fills, still run Step 4b and send the email with the FHTX watch box and "No trades in session YYYY-MM-DD".
+- **No-fill shortcut (saves usage):** if there are no opening fills, skip Steps 2–4 and send a short email instead. Subject: `Morning audit — session YYYY-MM-DD — no new trades`. Body: the FHTX watch box from Step 4b, a one-line list of any closes or stock fills, and the footer. Stop there.
 
 **Step 2: Data for each new opening option leg**
 - `get_option_quotes` (instrument_ids = option_ids) for delta, IV and mark. `get_equity_quotes` for spot.
 - `get_earnings_results` per underlying for the next report date (flag it if it falls before expiry; mark unverified dates "tent.").
-- Check the last 30 days of `get_equity_news` (limit 3) for known catalysts before expiry (PDUFA, AdComm, trial readouts, offerings).
+- For sub-$10B names only, check `get_equity_news` (limit 2) for known catalysts before expiry (PDUFA, AdComm, trial readouts, offerings). Skip news for large-caps and ETFs; the earnings date is enough. If a news call errors, note it once and move on.
 - Use `get_option_positions` to see whether the new leg pairs with an existing leg (spread wing, calendar, covered call).
 
 **Step 3: Metrics per short leg**
@@ -32,11 +32,11 @@ Cushion % from spot to strike, delta, IV, DTE, breakeven, assignment notional, R
 - Sub-$5 biotech sold at ≥0.40Δ counts as a stock-replacement trade: report the effective entry price and ask whether cash per share covers it.
 
 **Step 4b: Focus names (always include, trades or not): FHTX**
-Wilson is short ~165 FHTX $2.50 puts (Oct-16 and Nov-20), about $41k of assignment notional. Every morning:
+Wilson is short ~181 FHTX $2.50 puts (174 Oct-16 + 7 Nov-20 as of 9/25), about $45k of assignment notional. Every morning:
 - **Filings:** `get_sec_filing_index` (symbol FHTX, since = 3 days ago). Flag any 8-K, Form 4, SC 13D/13G(/A), S-3, 424B5 or S-1. For an 8-K, try `get_sec_filing`; if the text is unavailable, link EDGAR and say so. **Red-alert keywords:** Lilly, collaboration, termination, research term, restructuring, workforce reduction, strategic alternatives, clinical hold, offering, ATM.
 - **News:** `get_equity_news` (FHTX, limit 3), inside the window.
-- **Tape:** `get_equity_historicals` (FHTX, daily, last 30 sessions). Report the last close, the day's % change, and volume ÷ 30-day average (flag if ≥ 2×). Flag a close below the $3.27 52-week low.
-- **Options:** `get_option_quotes` for Oct-16 $2.50P (bc35edc4-69f2-489b-90d4-ff3a56d5d89e) and Nov-20 $2.50P (721b33c1-91bc-4103-b567-05567c7471f8). Report mark, IV, delta, open interest and volume, and the change in open interest from the prior day. Note whether the Oct mark is at or below the $0.21 take-profit (GTC) level.
+- **Tape:** `get_equity_fundamentals` (FHTX) for the session volume, `average_volume_30_days` and 52-week low, plus `get_equity_quotes` for the close and prior close. Report the last close, the day's % change, and volume ÷ 30-day average (flag if ≥ 2×). Flag a close below the $3.27 52-week low.
+- **Options:** `get_option_quotes` for Oct-16 $2.50P (bc35edc4-69f2-489b-90d4-ff3a56d5d89e) and Nov-20 $2.50P (721b33c1-91bc-4103-b567-05567c7471f8). Report mark, IV, delta, open interest and volume, and the change in open interest from the prior day (use the `close`/previous values if returned; otherwise compare with the last baseline: 9/25 OI Oct 5,491 · Nov 16). Note whether the Oct mark is at or below the $0.21 take-profit (GTC) level.
 - **Position:** the current FHTX short-put count from `get_option_positions`, and assignment notional as % of account value (`get_portfolio`; cap 10%).
 - **Reference levels** (from the 9/24 audit): cash/share $2.27 (6/30 cash $167.6M less burn, 64.8M fully diluted shares); Floor A $2.59 · Floor B $0.49–0.87; Oct breakeven $2.08, Nov $1.93; Lilly research term ends Dec 2026; Lilly Ph1 NCT06561685 primary completion Oct 2027; CBP-degrader guidance withdrawn (CRO issue); earnings ~11/4 (tent.).
 - **Email:** a boxed "FHTX watch" section right after the scorecard. Show the status line (🟢 quiet / 🟡 watch / 🔴 act) and the items above. 🔴 = any red-alert keyword, a close < $3.27, or volume ≥ 3× with a ≥ 8% drop. On 🔴, lead the email with it and give the lean: close or trim the Oct puts the same day.
