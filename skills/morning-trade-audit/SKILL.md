@@ -22,7 +22,7 @@ Morning trade audit: audit Wilson's new positions from the last US session and e
 **Step 2: Data for each new opening option leg**
 - `get_option_quotes` (instrument_ids = option_ids) for delta, IV and mark. `get_equity_quotes` for spot.
 - `get_earnings_results` per underlying for the next report date (flag it if it falls before expiry; mark unverified dates "tent.").
-- Do not call `get_equity_news` (unreliable). For sub-$10B names, check `get_sec_filing_index` (since = last session) for 8-Ks, offerings and 13D/G, and flag any ≥ 8% close-to-close price move as a possible unexplained catalyst. The earnings date is enough for large-caps and ETFs.
+- Do not call `get_equity_news` (unreliable). For sub-$10B names, check `get_sec_filing_index` (since = last session) for 8-Ks, offerings and 13D/G, and for each new-leg underlying use `get_equity_historicals` (interval day, last ~6 calendar days, up to 10 symbols per call) to flag any ≥ 8% close-to-close move as a possible unexplained catalyst. The earnings date is enough for large-caps and ETFs.
 - Use `get_option_positions` to see whether the new leg pairs with an existing leg (spread wing, calendar, covered call).
 
 **Step 3: Metrics per short leg**

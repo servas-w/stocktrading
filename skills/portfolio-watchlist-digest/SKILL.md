@@ -1,6 +1,6 @@
 ---
 name: portfolio-watchlist-digest
-description: Wilson's daily Robinhood portfolio job. Reads account 5QR66081, syncs the "Portfolio" watchlist (all short-option tickers plus positions at risk ≥ $5k), computes book risk on every short option leg, checks SEC filings and big price moves for the names that matter, and emails an HTML digest to wilsonhersandy@gmail.com. Use when the user says "run the daily digest", "watchlist digest", "portfolio watchlist", "daily run" or "run my portfolio job". Needs the Robinhood and Gmail connectors enabled in this chat.
+description: Wilson's daily Robinhood portfolio job. Reads account 5QR66081, syncs the "Portfolio" watchlist (all short-option and short-stock tickers plus positions at risk ≥ $5k), computes book risk on every short option leg, checks SEC filings and big price moves for the names that matter, and emails an HTML digest to wilsonhersandy@gmail.com. Use when the user says "run the daily digest", "watchlist digest", "portfolio watchlist", "daily run" or "run my portfolio job". Needs the Robinhood and Gmail connectors enabled in this chat.
 ---
 
 # Portfolio watchlist digest
@@ -23,7 +23,7 @@ Run Wilson's portfolio watchlist job. Invoking this skill pre-authorizes every w
 - If either call errors, stop without touching the watchlist and email a short failure notice instead.
 
 **Step 2: Decide what to watch**
-- **Always watch** any ticker with at least one **short** option leg (short puts, short calls, credit spreads, e.g. FHTX), regardless of size.
+- **Always watch** any ticker with at least one **short** option leg (short puts, short calls, credit spreads, e.g. FHTX) **or a short stock position** (unlimited risk, e.g. KOD), regardless of size.
 - For every other ticker, compute **$ at risk** = |stock quantity| × last price (`get_equity_quotes`, at most 20 symbols per call) + for long options Σ |average_price| × quantity (the premium paid, which is the most you can lose).
 - Use the current Portfolio list (`get_watchlist_items`) as memory, with hysteresis:
   - Not on the list: add if $ at risk ≥ **$5,000**.
@@ -43,7 +43,7 @@ Run Wilson's portfolio watchlist job. Invoking this skill pre-authorizes every w
 - Robinhood's news feed (`get_equity_news`) is unreliable, so **do not call it**. Material events come from SEC filings and price moves.
 - **Scope** = tickers added in Step 3 · tickers with a flagged leg · tickers whose nearest short leg has a cushion ≤ 20% or ≤ 21 DTE · FHTX (always) · stock-only positions with ≥ $15k at risk. Skip every other ticker and broad index ETFs (QQQ, SGOV, SCHX, SCHA, FNDA, FNDX, VOOG). On Mondays, widen the scope to the whole watch set.
 - `get_sec_filing_index` (since = window start) only for sub-$10B names in scope that have short puts or a short stock position. For any 8-K or offering filing, try `get_sec_filing` to read it. If the text isn't available, say so and link to EDGAR. Retry a throttled call once.
-- **Price-move check (from quotes already pulled in Steps 2 and 4, no extra calls):** flag any in-scope ticker whose last close is ≥ 8% away from the prior close. Say the cause is unknown from the feed; do not guess one.
+- **Price-move check:** quotes carry only one close, so they can't show a close-to-close move before the open. For the in-scope tickers with short puts, short calls or short stock, call `get_equity_historicals` (interval day, start ≈ 6 calendar days back, up to 10 symbols per call) and compare the last two daily closes. Flag any move ≥ 8% (also compare the overnight/pre-market last price with the last close for a second flag). Say the cause is unknown; do not guess one.
 - Judge materiality as a short-premium options seller would: would this plausibly move the stock, IV or assignment risk?
   - ALERT: 8-K items (FDA/clinical, financing, M&A, strategic alternatives, CEO/CFO change, going concern, bankruptcy, delisting notice, restatement), offerings/ATM/S-3/424B, activist 13D/13G, Form 4 insider sales over $1M, earnings with the key numbers, and ≥ 8% price moves.
   - SKIP: routine 10-Q/10-K, small Form 4s, duplicates.
