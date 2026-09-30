@@ -37,19 +37,19 @@ You are running Wilson's daily portfolio watchlist job. Wilson set this routine 
 - For each short leg compute: moneyness % (puts: (spot−K)/spot; calls: (K−spot)/spot; negative means ITM), DTE, breakeven (puts K − credit/100; calls K + credit/100), assignment notional (K × 100 × qty), and max loss for spreads (width × 100 − net credit).
 - **Flag** a leg if it is ITM, within 5% of the strike, or expiring within 7 days.
 
-**Step 5: Material news, for the news scope only (saves usage)**
-- **News scope** = tickers added in Step 3 · tickers with a flagged leg · tickers whose nearest short leg has a cushion ≤ 20% or ≤ 21 DTE · FHTX (always) · stock-only positions with ≥ $15k at risk. Skip every other ticker (short legs with >20% cushion and >21 DTE, small stock positions) and broad index ETFs (QQQ, SGOV, SCHX, SCHA, FNDA, FNDX, VOOG). On Mondays, widen the scope to the whole watch set.
-- `get_equity_news` (limit 2; limit 1 for mega-caps and stock-only positions). Keep only articles published inside the window. Many results are multi-ticker roundups ("stocks moving premarket", "whale alerts"). Only count one if it gives a specific cause for this ticker's move.
-- `get_sec_filing_index` (since = window start) only for sub-$10B names in the news scope that have short puts. For any 8-K or offering filing, try `get_sec_filing` to read it. If the text isn't available, say so and link to EDGAR.
-- If a news or filing call errors (tool unavailable, throttled), note it once in the email and move on; don't retry more than once.
+**Step 5: Material events, for the scope only (saves usage; no news feed)**
+- Robinhood's news feed (`get_equity_news`) is unreliable, so **do not call it**. Material events come from SEC filings and price moves.
+- **Scope** = tickers added in Step 3 · tickers with a flagged leg · tickers whose nearest short leg has a cushion ≤ 20% or ≤ 21 DTE · FHTX (always) · stock-only positions with ≥ $15k at risk. Skip every other ticker and broad index ETFs (QQQ, SGOV, SCHX, SCHA, FNDA, FNDX, VOOG). On Mondays, widen the scope to the whole watch set.
+- `get_sec_filing_index` (since = window start) only for sub-$10B names in scope that have short puts or a short stock position. For any 8-K or offering filing, try `get_sec_filing` to read it. If the text isn't available, say so and link to EDGAR. Retry a throttled call once.
+- **Price-move check (from quotes already pulled in Steps 2 and 4, no extra calls):** flag any in-scope ticker whose last close is ≥ 8% away from the prior close. Say the cause is unknown from the feed; do not guess one.
 - Judge materiality as a short-premium options seller would: would this plausibly move the stock, IV or assignment risk?
-  - ALERT: FDA actions (approval, CRL, PDUFA date, AdComm, clinical hold, RTF), trial readouts or endpoint misses, offerings/ATM/S-3/424B/pre-funded warrants/convertibles/reverse splits, M&A or strategic alternatives, guidance changes, earnings (with the key numbers), CEO/CFO changes, going concern, bankruptcy, delisting notices, restatements or material weakness, SEC/DOJ actions, trading halts, short-seller reports, activist 13D, dividend cuts, major contract wins or losses, rating changes from major banks, insider sales over $1M.
-  - SKIP: listicles ("stocks to watch"), generic market recaps, price-move-only stories with no cause, promotional pieces, duplicates of the same event (keep the best source).
+  - ALERT: 8-K items (FDA/clinical, financing, M&A, strategic alternatives, CEO/CFO change, going concern, bankruptcy, delisting notice, restatement), offerings/ATM/S-3/424B, activist 13D/13G, Form 4 insider sales over $1M, earnings with the key numbers, and ≥ 8% price moves.
+  - SKIP: routine 10-Q/10-K, small Form 4s, duplicates.
 
 **Step 6: Analysis for each material item and each flagged leg**
 Write tight commentary, using numbers, not adjectives:
 - **Your position:** the structure, strikes, expiry, credit, spot, cushion %, DTE, breakeven and assignment or max-loss dollars.
-- **Read-through:** what the news means for the thesis (e.g. analyst price target vs your strike, dilution math, what a filing implies, sector or macro driver). Separate signal from noise.
+- **Read-through:** what the filing or price move means for the thesis (e.g. dilution math, what a filing implies, sector or macro driver). Separate signal from noise.
 - **Next dates:** earnings, PDUFA/AdComm, trial readouts, ex-dividend, Nasdaq $1 minimum-bid clock, expiry. Only state a date as fact if a source gave it; otherwise say "check whether earnings land before expiry".
 - **To consider:** hold / roll down-and-out for a credit / close / take assignment (with effective cost basis) / hedge / write more covered calls. End with a one-line **Lean**. These are points to weigh; never place orders.
 - For a clinical-stage biotech with a binary or dilution event, note that it warrants a full cash-floor and dilution audit. For a dislocated large-cap, note that it's a candidate for the put-overreaction screen.
@@ -60,8 +60,8 @@ Use `send_message` with an HTML body.
 - Body, in this order:
   1. **Today's take:** a shaded box with the 3–5 things that need attention, most urgent first (ITM or expiring legs, then material news).
   2. A line on positions: "Tracking K tickers". Then "Added: …" and "Removed: …" if any, each with the reason (new short option, crossed $5k, closed, fell below $4k). List "Could not watch" symbols if any.
-  3. **Material news + analysis:** per ticker, most severe first: **[Category]** headline, source, date and link, then the Step 6 commentary. End the section with one grey line listing the tickers checked with nothing material.
+  3. **Material events + analysis:** per ticker, most severe first: **[Category]** filing or move, source, date and link, then the Step 6 commentary. End the section with one grey line listing the tickers checked with nothing material. No news headlines are pulled; don't apologise for it in the email.
   4. **Book risk table:** leg, spot, moneyness (red if ITM, amber if within 5%), DTE, breakeven, note. **Mondays: every short leg. Other days: only flagged legs and legs with a cushion ≤ 10%**, followed by one line "N other legs, all >10% OTM". Then one line on the largest position that isn't flagged.
-  5. **Macro backdrop:** 1–2 lines (rates, Fed odds, index moves, crypto) and what they mean for the book.
+  5. **Macro backdrop:** 1–2 lines from quotes only (QQQ, IBIT/BTC, NVDA moves vs the prior close) and what they mean for the book. Don't cite rates or Fed odds unless a source gave them.
   6. Footer: "These are points to weigh, not orders."
 - Keep it scannable, with no preamble.

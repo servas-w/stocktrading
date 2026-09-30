@@ -20,7 +20,7 @@ Morning trade audit: audit Wilson's new positions from the last US session and e
 **Step 2: Data for each new opening option leg**
 - `get_option_quotes` (instrument_ids = option_ids) for delta, IV and mark. `get_equity_quotes` for spot.
 - `get_earnings_results` per underlying for the next report date (flag it if it falls before expiry; mark unverified dates "tent.").
-- For sub-$10B names only, check `get_equity_news` (limit 2) for known catalysts before expiry (PDUFA, AdComm, trial readouts, offerings). Skip news for large-caps and ETFs; the earnings date is enough. If a news call errors, note it once and move on.
+- Do not call `get_equity_news` (unreliable). For sub-$10B names, check `get_sec_filing_index` (since = last session) for 8-Ks, offerings and 13D/G, and flag any ≥ 8% close-to-close price move as a possible unexplained catalyst. The earnings date is enough for large-caps and ETFs.
 - Use `get_option_positions` to see whether the new leg pairs with an existing leg (spread wing, calendar, covered call).
 
 **Step 3: Metrics per short leg**
@@ -34,7 +34,6 @@ Cushion % from spot to strike, delta, IV, DTE, breakeven, assignment notional, R
 **Step 4b: Focus names (always include, trades or not): FHTX**
 Wilson is short ~181 FHTX $2.50 puts (174 Oct-16 + 7 Nov-20 as of 9/25), about $45k of assignment notional. Every morning:
 - **Filings:** `get_sec_filing_index` (symbol FHTX, since = 3 days ago). Flag any 8-K, Form 4, SC 13D/13G(/A), S-3, 424B5 or S-1. For an 8-K, try `get_sec_filing`; if the text is unavailable, link EDGAR and say so. **Red-alert keywords:** Lilly, collaboration, termination, research term, restructuring, workforce reduction, strategic alternatives, clinical hold, offering, ATM.
-- **News:** `get_equity_news` (FHTX, limit 3), inside the window.
 - **Tape:** `get_equity_fundamentals` (FHTX) for the session volume, `average_volume_30_days` and 52-week low, plus `get_equity_quotes` for the close and prior close. Report the last close, the day's % change, and volume ÷ 30-day average (flag if ≥ 2×). Flag a close below the $3.27 52-week low.
 - **Options:** `get_option_quotes` for Oct-16 $2.50P (bc35edc4-69f2-489b-90d4-ff3a56d5d89e) and Nov-20 $2.50P (721b33c1-91bc-4103-b567-05567c7471f8). Report mark, IV, delta, open interest and volume, and the change in open interest from the prior day (use the `close`/previous values if returned; otherwise compare with the last baseline: 9/25 OI Oct 5,491 · Nov 16). Note whether the Oct mark is at or below the $0.21 take-profit (GTC) level.
 - **Position:** the current FHTX short-put count from `get_option_positions`, and assignment notional as % of account value (`get_portfolio`; cap 10%).
