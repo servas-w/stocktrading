@@ -1,11 +1,11 @@
 ---
 name: rh-weekly-book-audit
-description: Wilson's weekly review of the positions he OPENED over the past week on Robinhood account 5QR66081, with blunt Shkreli-style forensic commentary on the new trades and on how portfolio composition drifted. Grades every new position against Playbook v2, shows cohort stats and the week's total realized P&L, reviews held lots, awards trade of the week and trade to regret, compares start vs end of week composition, and sets next week's actions. Use when the user says "RH weekly audit", "weekly book audit", "weekly review of my new positions" or "weekend review". For the daily version use rh-daily-book-audit.
+description: Wilson's weekly review of the positions he OPENED over the past week on Robinhood account 5QR66081, with blunt Shkreli-style forensic commentary on the new trades and on how portfolio composition drifted. Grades every new position against Playbook v2, shows cohort stats and the week's total realized P&L, reviews held lots, awards trade of the week and trade to regret, compares start vs end of week composition, and sets next week's actions. Saves a PDF (WarRoom_<date>_5-WEEKBOOK.pdf) to the Drive folder Robinhood Portfolio Review. Use when the user says "RH weekly audit", "weekly book audit", "weekly review of my new positions" or "weekend review". For the daily version use rh-daily-book-audit.
 ---
 
 # RH weekly book audit
 
-Requires the **Robinhood** connector. Read-only on Robinhood: never place, modify or cancel orders. Account `5QR66081` only. If a result is too large, use code execution (jq/python) or read in chunks. Do not call `get_equity_news`. Reply in chat, no preamble. Email (Gmail, wilsonhersandy@gmail.com) only if asked.
+Requires the **Robinhood** and **Google Drive** connectors. Read-only on Robinhood: never place, modify or cancel orders. Account `5QR66081` only. If a result is too large, use code execution (jq/python) or read in chunks. Do not call `get_equity_news`. Reply in chat and save a PDF to Drive (see below), no preamble. Email (Gmail, wilsonhersandy@gmail.com) only if asked.
 
 **Scope = positions opened in the last 7 calendar days** to the latest close (match `trade_date`). Rolls count as close + new open. Realized P&L and held lots cover the whole book, not just the week's opens.
 
@@ -51,8 +51,20 @@ Pass/fail counts on each Playbook rule across the week's opens. Name one **patte
 
 **Bear case on the biggest position (30 seconds)**: take the largest name by % NAV. In 5 lines: the strongest case against it, the numbers behind it (cash, burn, FCF, debt, dilution, catalyst dates), the price at which the thesis breaks, what you'd do at that price, and what would change your mind. Use `get_equity_fundamentals`, `get_financials`, `get_earnings_results`, `get_sec_filing_index`; mark anything unsourced as unknown.
 
-**Journal + scoreboard (Google Drive, optional)**
-If the Google Drive connector is on, `search_files` for **"RH Trade Journal"** and **"RH Audit Scoreboard"** (create each with `create_file` if missing; journal = markdown, scoreboard = CSV with header `date,type,trades,avg_grade,premium_sold,pct_captured,cap_breaches,rule_score,sleep_score,top_theme_pct,week_pnl`). `read_file_content` the journal and match entries by ticker/strike/expiry to each new position: show **"Your thesis"** (the line you wrote) next to the outcome, and say whether the thesis held, was wrong, or was never written (then ask for a one-liner and offer to log it). After the audit, append one row to the scoreboard (read, add row, `update_file`). If Drive is off, skip silently and print the row at the end of the reply instead.
+**Journal + scoreboard (same Drive folder)**
+The Drive connector cannot edit a file's content, so these are snapshot files, like `WarRoom_metrics_<date>.csv`: read the newest, add to it, save a new file. Never try to edit in place.
+- **Journal**: newest file named `WarRoom_journal_<YYYY-MM-DD>*.md` in the folder (`search_files` with `parentId = '1kchKBFGOQov1A6EZNxkgdD0qyzlTKttW' and title contains 'WarRoom_journal_'`, pick the latest date/version). One line per trade: `date | ticker | structure | strikes | expiry | qty | price | grade | thesis | kill-shot | status`.
+- **Scoreboard**: newest `WarRoom_scoreboard_<YYYY-MM-DD>*.csv`, header `date,type,trades,avg_grade,premium_sold,pct_captured,cap_breaches,rule_score,sleep_score,top_theme_pct,week_pnl`.
+- To write: copy the newest file's full content, apply the change, `create_file` `WarRoom_<journal|scoreboard>_<session date>.<md|csv>` (add `-v2`... if that name exists) with `contentMimeType` `text/markdown` or `text/csv` and `disableConversionToGoogleType: true`. If none exists yet, start one with just the header.
+- Each run: match journal lines by ticker/strike/expiry to each new position and show **"Your thesis"** next to the outcome (held, wrong, or never written: then ask for a one-liner and offer to log it). Flip matched `status: considered` lines to `filled` (or `expired-unfilled` when the order never filled). Then add one scoreboard row (`type` = weekly).
+
+**Save to Drive (required)**
+Every run saves its report as a PDF in the Google Drive folder **Robinhood Portfolio Review** (folder id `1kchKBFGOQov1A6EZNxkgdD0qyzlTKttW`; never another folder, never a subfolder). The folder feeds Wilson's other stock market reports, so the name must match exactly:
+- Name: `WarRoom_<YYYY-MM-DD>_5-WEEKBOOK.pdf`, dated the **last session of the week** (normally Friday), the same date the `3-WEEKLY` war room file uses, even when run on the weekend. Title: `RH weekly book audit - week of <Mon> to <Fri>`.
+- Date = the **US session date (New York)**, never the Da Nang date. If a file with that exact name already exists (`search_files` with `parentId = '1kchKBFGOQov1A6EZNxkgdD0qyzlTKttW' and title = '<name>'`), add `-v2`, `-v3` ... before `.pdf`; never create two files with the same name.
+- Render the PDF with code execution (1-3 pages, tables for the cards and composition), then `create_file` with `parentId` = the folder id, `contentMimeType` `application/pdf`, `base64Content`, and `disableConversionToGoogleType: true`. If a PDF can't be rendered, say so; do not upload a Google Doc in its place.
+- PDF header, same as the other WarRoom reports: line 1 `<report title> - US session YYYY-MM-DD`; line 2 `Account ...6081 | Run: <UTC time> (<Da Nang time>) | Read-only: no orders placed, modified or cancelled.` Last section **UNVERIFIED**: everything not pulled or not sourced (IVR, tentative earnings dates, stale quotes, bad greeks).
+- End the chat reply with the file name and link. If the Drive connector is off, say so in one line and give the chat report only.
 
 **Sleep-at-night score (0-10, 10 = sleeps fine)**: start at 10. Subtract: 1 per name over 8% NAV (2 if over 10%); 1 per danger leg, plus 1 more if that leg is also <= 21 DTE (each leg counted once otherwise); 1 if short stock or a naked call is open; 1 if the -20% stress costs > 5% NAV; 1 if cash+BP < 20% NAV; 1 if > 40% NAV sits in one theme. Floor 0. Show the score with the 2-3 biggest deductions and the single fix that adds the most points.
 
