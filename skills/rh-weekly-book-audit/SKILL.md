@@ -35,13 +35,20 @@ Credit, cushion at entry vs now, delta, DTE, % of credit captured so far, P&L no
 **Step 6: Behavior scorecard**
 Pass/fail counts on each Playbook rule across the week's opens. Name one **pattern to watch** (the repeated breach) and one **habit to keep**.
 
+**Bear case on the biggest position (30 seconds)**: take the largest name by % NAV (notional + shares). In 5 lines: the strongest case against it, the numbers behind it (cash, burn, FCF, debt, dilution, catalyst dates), the price at which the thesis breaks, what you'd do at that price, and what would change your mind. Use `get_equity_fundamentals`, `get_financials`, `get_earnings_results`, `get_sec_filing_index`; mark anything unsourced as unknown.
+
+**Journal + scoreboard (Google Drive, optional)**
+If the Google Drive connector is on, `search_files` for **"RH Trade Journal"** and **"RH Audit Scoreboard"** (create each with `create_file` if missing; journal = markdown, scoreboard = CSV with header `date,type,trades,avg_grade,premium_sold,pct_captured,cap_breaches,rule_score,sleep_score,top_theme_pct,week_pnl`). `read_file_content` the journal and match entries by ticker/strike/expiry to each new position: show **"Your thesis"** (the line you wrote) next to the outcome, and say whether the thesis held, was wrong, or was never written (then ask for a one-liner and offer to log it). After the audit, append one row to the scoreboard (read, add row, `update_file`). If Drive is off, skip silently and print the row at the end of the reply instead.
+
+**Sleep-at-night score (0-10, 10 = sleeps fine)**: start at 10. Subtract: 1 per name over 8% NAV (2 if over 10%), 1 per short leg ITM or within 7% of strike, 1 per short leg <= 21 DTE and near the money, 1 if net short-stock/unlimited risk is open, 1 if a -20% market day costs > 5% NAV, 1 if cash+BP < 20% NAV, 1 if > 40% NAV sits in one theme. Floor 0. Show the score with the 2-3 biggest deductions and the single fix that adds the most points.
+
 **Output (chat), in this order**
 1. Headline, one punchy line: week grade, trades opened, premium sold, biggest concentration.
 2. **Awards**: Trade of the Week, Trade to Regret, Best Discipline, Biggest Tail Risk.
-3. Trade cards, sorted worst grade first.
+3. Trade cards, sorted worst grade first, each with **your thesis (from journal)**.
 4. Cohort stats table with arrows vs last week.
-5. Composition start -> now with concentration meters (e.g. biotech ████████░░ 38%), drift, ladder, earnings clusters, stress.
-6. Scorecard + pattern to watch + habit to keep.
+5. Composition start -> now with concentration meters (e.g. biotech ████████░░ 38%), drift, ladder, earnings clusters, stress, **Sleep-at-night X/10** vs last week's score from the scoreboard.
+6. Scorecard + pattern to watch + habit to keep + **30-second bear case** on the biggest position + **scoreboard trend** (last 4-8 rows: grade, sleep score, P&L, cap breaches, with arrows).
 7. **Next week: 5 actions**, urgent first.
 8. Footer: "Points to weigh, not orders."
 
