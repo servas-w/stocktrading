@@ -1,38 +1,42 @@
 ---
 name: rh-daily-book-audit
-description: Wilson's daily audit of the whole Robinhood book (account 5QR66081) against Playbook v2. Reads positions, working orders and today's fills, then checks every short leg for ITM/defense/21-DTE/50%-GTC actions, the 10% NAV cap (counting held shares), earnings before expiry, and any >=8% moves. Output is a concise chat report; email only if asked. Use when the user says "RH daily audit", "daily book audit", "audit my book", or "check my book". For the new-fills-only morning email use morning-trade-audit; for Axe/Wendy roleplay use the war room skill.
+description: Wilson's daily audit of the positions he OPENED in the latest US session on Robinhood account 5QR66081, with blunt Shkreli-style forensic commentary on each new trade and on how it changes his portfolio composition. Grades each new leg against Playbook v2, stress-tests it, gives a verdict, then shows before/after book concentration. Use when the user says "RH daily audit", "daily book audit", "audit today's trades" or "audit my new positions today". For the weekly version use rh-weekly-book-audit; for Axe/Wendy roleplay use the war room skill.
 ---
 
 # RH daily book audit
 
-Requires the **Robinhood** connector. Read-only: never place, modify or cancel orders. Account `5QR66081` only. If a result is too large, use code execution (jq/python) or read in chunks. Do not call `get_equity_news` (unreliable). Reply in chat, concise, no preamble; send an email (Gmail, to wilsonhersandy@gmail.com) only if Wilson asks.
+Requires the **Robinhood** connector. Read-only: never place, modify or cancel orders. Account `5QR66081` only. If a result is too large, use code execution (jq/python) or read in chunks. Do not call `get_equity_news` (unreliable). Reply in chat, no preamble. Email (Gmail, wilsonhersandy@gmail.com) only if asked.
 
-**Step 1: Book**
-- `get_portfolio` (NAV, cash, buying power), `get_equity_positions`, `get_option_positions` (nonzero, all pages), `get_option_orders` and `get_equity_orders` (working orders, plus fills from the last 3 days by `trade_date`).
-- Strip trailing digits from adjusted chains (e.g. `SNDQ1` -> `SNDQ`). Group by ticker: shares, short/long legs, structure (put spread, covered call, calendar, naked).
-- `get_option_instruments` (ids comma-separated, <=55 per call) for strike/type/expiry; `get_option_quotes` for delta, IV, mark; `get_equity_quotes` (<=20 symbols) for spot.
+**Scope = positions opened in the session.** Session = today's US session if it has traded, else the latest finished one; match each execution's `trade_date`, not `created_at`.
 
-**Step 2: Per short leg**
-Moneyness % (puts (S-K)/S, calls (K-S)/S; negative = ITM), delta, DTE, breakeven, mark vs credit (% of max profit captured), assignment notional, max loss for spreads.
-Action flags (Playbook v2):
-- **ITM** or **delta <= -0.30** or **spot within 7% of strike**: defense. Give hold / roll down-and-out for a credit / close / take assignment (effective basis).
-- **<= 21 DTE and ITM/near**: gamma rule, act now.
-- **>= 50% of credit captured**: velocity profit-take; check a GTC close is working (`get_option_orders` working). If not, say "no GTC resting".
-- **Short < 30 DTE** opened without an OPP tag: note it.
-- **Debit trades**: apply the 3:1 test (reward:risk).
-- **Earnings before expiry** (`get_earnings_results`, mark unverified "tent."): flag.
+**Step 1: Opens**
+- `get_option_orders` and `get_equity_orders` (state=filled, last 5 days, all pages). Keep executions with `trade_date` = session and opening effect (open, buy, sell_short). Group multi-leg orders into one position (spread, calendar, covered call, roll = close + open).
+- Also list working orders (state open) as "pending".
+- **No opens**: say so in one line, show only Step 4 (composition + fire alarms), stop.
 
-**Step 3: Book-level**
-- **10% NAV cap** per name: (short put assignment notional + held shares value) / NAV. List anything >= 8% and mark >10% red.
-- Ticker with a short leg or short stock is always "watched"; short stock = unlimited risk, say so.
-- **Move check**: for tickers with short legs/short stock, `get_equity_historicals` (interval day, ~6 calendar days, <=10 symbols per call); flag >= 8% close-to-close, cause "unknown" unless sourced. Sub-$10B names with short puts: `get_sec_filing_index` for 8-K/offering/13D.
-- Cash %, buying power %, margin use.
-- Today's fills: any second opening ticket on one name in a day (rule: one opening ticket per name per day); any put sold on an underwater held lot.
+**Step 2: Data per new position**
+`get_option_instruments`, `get_option_quotes` (delta, IV, mark), `get_equity_quotes`, `get_equity_fundamentals`, `get_earnings_results` (next date; "tent." if unverified), `get_equity_historicals` (day, ~6 days: flag >= 8% moves; cause "unknown" unless sourced), `get_sec_filing_index` for sub-$10B names (8-K, offerings, 13D/G, going concern). Use `get_financials` / `get_equity_analyst_ratings` when the forensic read needs them.
 
-**Output (chat)**
-1. One line: NAV, cash, BP, day change.
-2. **Act today** (max 5, most urgent first): ticker, leg, why, suggested action.
-3. Table of short legs, sorted by cushion: leg, spot, cushion %, delta, DTE, % captured, flag. Show flagged + cushion <= 10%; one line for the rest.
-4. Cap table (names >= 8% NAV).
-5. Earnings/catalysts inside expiry windows.
+**Step 3: Per new position (the core)**
+Metrics: credit, cushion %, delta, IV, DTE, breakeven, assignment notional, max loss, ROC and annualized ROC, % NAV (notional + held shares).
+- **Grade (Playbook v2)**: A fits every rule; B event before expiry or DTE slightly off 60-90; C delta >= 0.25, ITM, <= 30 DTE, unstructured binary, or sub-$5 biotech sold >= 0.40 delta (stock replacement). Also check IV gate (IVR >= 50 or spread exception), one opening ticket per name per day, OPP tag if < 30 DTE, no puts on underwater lots, 3:1 on debit trades.
+- **Forensic read, Shkreli-style** (blunt, skeptical, funny, numbers first, never padded): follow the cash. Biotech: cash/share vs strike, burn runway, ATM/dilution, debt, Floor A/B. Large-cap: owner FCF (OCF - CapEx - SBC), debt, what the sell-off priced in. Say what the market is actually afraid of, whether you're being paid for it, and what the strike really means in dollars per share.
+- **The bear case in one line** (best argument you're wrong) and **kill-shot** (the single fact that would make you close: price, filing, date).
+- **Stress**: P&L at -10% / -20% / -35% on the underlying vs the premium collected. How many days of theta does one bad day cost?
+- **Verdict**: one sentence + "Would I do it again? Y/N".
+
+**Step 4: Portfolio composition (before vs after today)**
+`get_portfolio`, `get_equity_positions`, `get_option_positions` (nonzero, all pages; strip trailing digits from adjusted chains).
+- Show **before -> after**: % NAV by name (notional + shares), by theme (biotech / AI-semis / crypto / large-cap / index), net delta $, theta/day, cash and BP %.
+- Mark names >= 8% NAV amber, >10% red (10% NAV cap counts held shares). Flag if today's trade stacked an existing theme or the same earnings week.
+- **Fire alarms** on the rest of the book, one line each, max 4: ITM, delta <= -0.30, within 7% of strike, <= 21 DTE, >= 50% captured with no GTC resting, short stock.
+
+**Output (chat), in this order**
+1. Headline in one punchy line: e.g. "3 new trades: A, B, C. Book is 41% biotech. Shkreli would raise an eyebrow."
+2. Trade cards (one per new position): grade badge, metrics line, forensic read, bear case, kill-shot, stress, verdict.
+3. Composition before -> after (compact table) + a **Concentration meter** (e.g. biotech ████████░░ 38%).
+4. Fire alarms.
+5. **One lesson for tomorrow** (the rule or habit today's trades most tested).
 6. Footer: "Points to weigh, not orders."
+
+Tone: dry, sharp, a bit irreverent; roast the trade, not the person; no hype, no filler. Short sentences. Numbers beat adjectives.
