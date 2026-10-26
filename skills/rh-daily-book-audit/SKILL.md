@@ -1,6 +1,6 @@
 ---
 name: rh-daily-book-audit
-description: Wilson's daily audit of the positions he OPENED in the latest US session on Robinhood account 5QR66081, with blunt Shkreli-style forensic commentary on each new trade and on how it changes his portfolio composition. Grades each new leg against Playbook v2, stress-tests it, gives a verdict, then shows before/after book concentration. Saves a PDF (WarRoom_<date>_4-BOOK.pdf) to the Drive folder Robinhood Portfolio Review. Use when the user says "RH daily audit", "daily book audit", "audit my book", "check my book" or "audit today's trades". For the emailed morning audit of yesterday's fills use morning-trade-audit; for the weekly version use rh-weekly-book-audit; for Axe/Wendy roleplay use the war room skill.
+description: Wilson's daily audit of the positions he OPENED in the latest US session on Robinhood account 5QR66081, with blunt Shkreli-style forensic commentary on each new trade and on how it changes his portfolio composition. Grades each new leg against Playbook v2, stress-tests it, gives a verdict, then shows before/after book concentration. Saves a PDF (WarRoom_YYYY-MM-DD_4-BOOK.pdf) to the Drive folder Robinhood Portfolio Review. Use when the user says "RH daily audit", "daily book audit", "audit my book", "check my book" or "audit today's trades". For the emailed morning audit of yesterday's fills use morning-trade-audit; for the weekly version use rh-weekly-book-audit; for Axe/Wendy roleplay use the war room skill.
 ---
 
 # RH daily book audit

@@ -1,6 +1,6 @@
 ---
 name: rh-weekly-book-audit
-description: Wilson's weekly review of the positions he OPENED over the past week on Robinhood account 5QR66081, with blunt Shkreli-style forensic commentary on the new trades and on how portfolio composition drifted. Grades every new position against Playbook v2, shows cohort stats and the week's total realized P&L, reviews held lots, awards trade of the week and trade to regret, compares start vs end of week composition, and sets next week's actions. Saves a PDF (WarRoom_<date>_5-WEEKBOOK.pdf) to the Drive folder Robinhood Portfolio Review. Use when the user says "RH weekly audit", "weekly book audit", "weekly review of my new positions" or "weekend review". For the daily version use rh-daily-book-audit.
+description: Wilson's weekly review of the positions he OPENED over the past week on Robinhood account 5QR66081, with blunt Shkreli-style forensic commentary on the new trades and on how portfolio composition drifted. Grades every new position against Playbook v2, shows cohort stats and the week's total realized P&L, reviews held lots, awards trade of the week and trade to regret, compares start vs end of week composition, and sets next week's actions. Saves a PDF (WarRoom_YYYY-MM-DD_5-WEEKBOOK.pdf) to the Drive folder Robinhood Portfolio Review. Use when the user says "RH weekly audit", "weekly book audit", "weekly review of my new positions" or "weekend review". For the daily version use rh-daily-book-audit.
 ---
 
 # RH weekly book audit
