@@ -9,7 +9,7 @@ The master institutional framework for evaluating clinical-stage biopharma equit
 
 ## Deep Run Protocol (read first; overrides anything looser below)
 
-1. **Gate before you gather.** First pull cash, debt, shares and the catalyst date (same 3 searches as `BIO:`). Stop with a 2-line NO-GO on the first hard fail: reverse split or bid-price deficiency pending, clinical-failure debt acceleration with cash ≤ debt (floor $0), runway < 6 months, or a bearish idea on a name priced for failure (Anti-CAPR).
+1. **Gate before you gather.** First pull cash, debt, shares and the catalyst date (same 3 searches as `BIO:`). Stop with a 2-line NO-GO on the first hard fail: reverse split or bid-price deficiency pending, clinical-failure debt acceleration with cash ≤ debt + covenant minimum (floor $0), runway < 6 months, or a bearish idea on a name priced for failure (Anti-CAPR).
 2. **Run only the stages the mode needs.** Mode A: Stages 1, 3, 4, 6, 7. Mode B: add Stage 2 (PoS), Stage 2B and Stage 5 (management). Mode C: add Stages 2, 2B, 2C, 2D and 6B. The napkin DCF (2C) and tri-scenario targets (2D) are for Mode B/C only; for Mode A, Bear = Floor A and Base/Bull are omitted.
 3. **Budget.** At most 10 searches. At the budget, stop and mark gaps UNVERIFIED. Never invent a figure the tools did not return (IV Rank, skew, open interest, 13F holdings, transcript quotes).
 4. **Optional trade.** If the user gives strike, expiry and credit, grade that trade; otherwise propose the max eligible strike and say a chain quote is needed.
@@ -39,7 +39,7 @@ To avoid operational paralysis while enforcing strict capital protection, every 
       - **Tier 1B (lower tier)**: strike above Floor B but Net Breakeven ≤ Floor B on an out-of-the-money strike. The premium, not the strike, sits on the floor; print the gap % and the minimum credit (Strike − Floor B).
   - **Tier 2: Asymmetric Pre-Catalyst Harvest (Pure Volatility & Theta Capture)**:
       - The options contract expires **safely prior ($\ge 14$ days) to the guided binary catalyst window**. Zero binary readout risk is borne during the holding duration.
-      - **Net Breakeven Anchor Rule**: The position's **Net Breakeven** ($\text{Net Breakeven} = \text{Strike} - \text{Credit Collected}$) must sit strictly at or below the Underwriting Strike Anchor ($\text{Net Breakeven} \le \text{Anchor}$), and the nominal strike must be the lowest liquid strike available, backed by raw balance sheet cash per share with $>12$ months of cash runway.
+      - **Net Breakeven Anchor Rule**: The position's **Net Breakeven** ($\text{Net Breakeven} = \text{Strike} - \text{Credit Collected}$) must sit strictly at or below the Underwriting Strike Anchor ($\text{Net Breakeven} \le \text{Anchor}$), and the nominal strike must be a listed strike at or below the max eligible strike, backed by raw balance sheet cash per share with $>12$ months of cash runway.
       - Requires deep Out-of-the-Money safety cushion ($\ge 35\%-50\%$), pro-rated DTE cash burn modeling, and favorable fundamental SOTP/PoS risk-reward (elevated IV Rank is preferred for vega acceleration, but not a mandatory rejection gate).
   - **Tier 3: Unbacked Binary Speculation (Mandatory NO-GO)**:
       - The position straddles a binary clinical event while the strike and breakeven sit radically above net cash (underwriting unproven clinical pipeline value). Automatically triggered for **HARD REJECTION / WALK AWAY** (e.g., selling ALMS $15 puts when cash was $3.36 into an imminent lupus Phase 2 readout).
@@ -67,7 +67,7 @@ The trade must possess positive mathematical expected value (+EV): $$\text{EV}_{
 ### 6. Bearish Trades: Anti-CAPR First
 
   - **Anti-CAPR (never short what is priced for failure)**: no short stock or bearish options on a name near its distressed floor, with compressed EV or peak negative sentiment. Ambiguous data or FDA flexibility squeezes those +100–300% overnight.
-  - Bearish trades are allowed only when the stock is priced for perfection (run-up ≥ 50%, spot ≥ 3× Floor B), the lead is single-asset (≥ 80% of EV, so failure is a Class B collapse to cash) and model PoS ≤ 30%. Vehicle rules and the decision table are in Stage 6B.
+  - Bearish trades are allowed only when the stock is priced for perfection (run-up ≥ 50%, spot ≥ 3× the cash-only A2 floor), the lead is single-asset (≥ 80% of EV, so failure is a Class B collapse to cash) and model PoS ≤ 30%. Vehicle rules and the decision table are in Stage 6B.
   - **No naked binary shorts**: a tactical equity short must be covered ≥ 48 hours before the guided data window.
 
 -----
@@ -84,7 +84,7 @@ The trade must possess positive mathematical expected value (+EV): $$\text{EV}_{
           - Evaluated under **Tier 2 Standards**: Net Breakeven $\le$ Underwriting Anchor, OTM Cushion $\ge 35\%$, DTE-pro-rated burn. IV Rank is context only.
           - Exit strategy: 50% GTC profit target or early IV deflation harvest.
       - **Mode B: Binary Event Underwriting (Event-Capturing Expiration)**:
-          - Expiration date straddles the binary event announcement.
+          - Expiration date straddles the binary event announcement, or falls inside the 14-day pre-window buffer (treated as straddling).
           - Evaluated under **Tier 1 Standards**: Gross Strike $\le$ Floor B (Tier 1) or Net Breakeven $\le$ Floor B (Tier 1B), rigorous Bayesian clinical PoS modeling, full multi-quarter catalyst burn penalty.
       - **Mode C: Asymmetric Short Alpha / Bear Put Debit Spread (Priced for Perfection / Single-Asset Binary Collapse)**:
           - Stock has run up >= 50%-150% into data, trading at extreme valuation >3x cash floor.
@@ -229,6 +229,8 @@ Use when options straddle the binary catalyst: $$\text{Catalyst-Adjusted Cash} =
   - *Rule*: If a clinical catalyst failure empowers the senior lender to accelerate principal repayment, and liquid cash <= debt principal + covenanted reserve, **Distressed Cash Floor = $0.00**. Senior debt holders seize all cash; common equity receives zero.
 
 #### Secondary Pipeline SOTP Residual Valuation
+
+  - **The lead asset stays out of the residual**: it is the bet, and the floor must survive it failing. Exception: it goes in (at a Phase 3 value) only when it already has positive pivotal data AND the event inside the contract is not an efficacy readout.
 
   - **Tier-1 Global Pharma Partnered Assets (Lilly, Merck, Novartis, etc.)**: Apply a **40% to 50% haircut** (validating enterprise platform value).
   - **Unpartnered / Clinical Stage Assets**: Apply an **80% to 85% haircut**. $$\text{Residual Pipeline Value} = \frac{\text{Unrisked Pipeline Baseline} \times (1 - \text{Haircut})}{\text{Fully Diluted Common-Equivalent Shares}}$$

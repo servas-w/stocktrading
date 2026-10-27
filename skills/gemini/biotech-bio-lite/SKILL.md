@@ -25,10 +25,10 @@ Clinical biotechs are bank accounts holding lottery tickets. Underwrite the cash
 3. **Search 2, catalyst**: `TICKER next data readout PDUFA topline 2026 2027`. Take: event type, guided window, whether it is an efficacy readout, and whether guidance slipped versus earlier statements.
 4. **Search 3, only if search 1 didn't already answer it**: `TICKER ATM offering S-3 reverse split Nasdaq deficiency`.
 
-## Hard gates (stop at the first fail, 2-line output)
+## Hard gates (check each as soon as its data arrives; stop at the first fail, 2-line output)
 
 - Reverse split pending or Nasdaq bid-price deficiency → NO PUTS.
-- Debt a lender can accelerate on clinical failure and cash ≤ debt → floor $0 → NO PUTS.
+- Debt a lender can accelerate on clinical failure and cash ≤ debt + any minimum-cash covenant → floor $0 → NO PUTS.
 - Runway < 6 months → NO PUTS (a raise is near-certain).
 - A bearish idea on a name trading below 1.5× Floor B → NO SHORT (Anti-CAPR).
 
@@ -37,11 +37,11 @@ Clinical biotechs are bank accounts holding lottery tickets. Underwrite the cash
 - **FD shares** = basic + pre-funded warrants. PFWs not found → write "PFW unverified" and cap the verdict at CONDITIONAL.
 - **Net cash** = cash + securities − debt, less burn since the balance-sheet date (q_burn × days ÷ 91).
 - **Raw cash/share** = net cash ÷ FD shares.
-- **Floor A** (expires before the catalyst) = (net cash − q_burn × DTE ÷ 91 × 1.2) ÷ FD shares.
+- **Floor A** (expires before the catalyst) = (net cash − q_burn × DTE ÷ 91 × 1.2) ÷ FD shares. No trade given: use the latest expiry that still leaves 14 days before the window.
 - **Floor B** (holds through the catalyst) = (net cash − q_burn × 1.5 × quarters to the end of the window) ÷ FD shares. Cash only: partnered pipeline value is a DEEP item.
-- **Mode**: expiry ≥ 14 days before the window → **A** (pre-catalyst harvest). Expiry after the window opens → **B** (binary). No window found → treat as B. **C** (bearish) only if spot ≥ 3× Floor B and the stock is up ≥ 50% in 6 months; otherwise the short side is closed.
+- **Mode**: expiry ≥ 14 days before the window → **A** (pre-catalyst harvest). Anything later, including expiry inside the 14-day buffer → **B** (binary). No window found → treat as B. No trade given → show the max strike for both A and B. **C** (bearish) is only in play if spot ≥ 3× Floor B and the stock is up ≥ 50% in 6 months; lite never approves a Mode C trade (it needs the PoS ≤ 30% check), it only says "Mode C possible → BIO DEEP:". Otherwise the short side is closed.
 - **Max strike**: Mode A → breakeven ≤ Floor A and strike ≤ raw cash/share. Mode B → strike ≤ Floor B (Tier 1) or breakeven ≤ Floor B (Tier 1B, lower tier).
-- **Stock replacement**: a sub-$5 put at or near the money is a share purchase in disguise. SR-pass if breakeven ≤ raw cash/share, else SR-fail.
+- **Stock replacement**: a sub-$5 put struck at ≥ 90% of spot (about delta 0.40 or more) is a share purchase in disguise. SR-pass if breakeven ≤ raw cash/share, else SR-fail.
 - **Trade given**: breakeven, OTM %, ROC = credit ÷ (strike − credit), annualized, tier, pass/fail against the floor.
 - **Liquidity is a warning only**: OI < 150 or a bid/ask wider than 25% of mid gets one ⚠️ line, never a rejection.
 - **IV is context only**: Gemini has no IV Rank. Write "IVR unverified" and never reject on it.
@@ -49,7 +49,7 @@ Clinical biotechs are bank accounts holding lottery tickets. Underwrite the cash
 ## Verdict
 
 - **GO**: passes the floor test for its mode, runway ≥ 12 months, no gate hit, PFWs verified.
-- **CONDITIONAL**: would be GO, but PFWs unverified, burn estimated, or the catalyst date is soft.
+- **CONDITIONAL**: would be GO, but PFWs unverified, burn estimated, runway 6–12 months (Mode A needs > 12), or the catalyst date is soft.
 - **WAIT**: the floor works only after a known event (e.g. post-raise), or the catalyst date is unknown.
 - **NO-GO**: fails the floor or a hard gate.
 

@@ -10,7 +10,7 @@ Clinical biotechs are liquidating bank accounts holding lottery tickets. Underwr
 ## Operating rules (why this version is cheap)
 
 1. **Gate before you gather.** Cash, dilution and catalyst timing first; option chain only if a strike can exist; PoS / DCF / management deep-dives only when a Mode B or C verdict hinges on them. Stop at the first hard fail.
-2. **Batch independent calls in one turn.** Budgets (data calls; calculator runs don't count): **LEAN** early exit ≤7 (Turn 1's 5 calls + Turn 2's financials and IV snapshot: every early exit needs those) · Mode A ≤11 · Mode B/C ≤12 (exposure check excluded unless requested) · Math-check ≤5 · **DEEP** ≤21. +2 when IVR comes from the proxy, +1 for the debt text block. At the budget, stop and mark gaps UNVERIFIED.
+2. **Batch independent calls in one turn.** Budgets (data calls; calculator runs don't count): **LEAN** early exit ≤7 (Turn 1's 5 calls + Turn 2's financials and IV snapshot: every early exit needs those) · Mode A ≤11 · Mode B/C ≤12 (exposure check excluded unless requested) · Math-check ≤7 (incl. a 2-call delta quote) · **DEEP** ≤21. +2 when IVR comes from the proxy, +1 for the debt text block. At the budget, stop and mark gaps UNVERIFIED.
 3. **The calculator does the math:** `python3 scripts/underwrite.py bio|strikes '<json>'`. Copy its numbers; never re-derive floors, EV or targets in prose. Missing inputs print n/a / UNVERIFIED — it never crashes. Don't open the script (~8k tokens): the JSON example below is its full interface.
 4. **Fresh data only.** Every figure from this session's tool calls with an "as of"; never from memory, past chats or snippets.
 5. **Compact card by default.** Load `references/deep-diligence.md` for Mode B/C PoS, napkin DCF, pipeline SOTP or management forensics; `references/full-dossier.md` only when asked for "full", "deep" or "dossier".
@@ -19,7 +19,7 @@ Clinical biotechs are liquidating bank accounts holding lottery tickets. Underwr
 
 ## Usage budget (v5 — read first; overrides any looser rule below)
 
-Default mode is **LEAN**: `BIO: TICKER`, `LEAN: TICKER` or a bare ticker. Switch to **DEEP** only when the user types `BIO DEEP:` / `DEEP:` / full / dossier, or a Mode B/C verdict flips across the PoS range. A trade after the ticker (`BIO: FHTX 2.5P Jan @0.45`, with either prefix) means Math-check mode at that depth. A LEAN card that is Mode B or C, or has the strike or BE within 10% of a floor, ends with one line: *→ BIO DEEP: TICKER for PoS / DCF / management.*
+Default mode is **LEAN**: `BIO: TICKER`, `LEAN: TICKER` or a bare ticker. Switch to **DEEP** only when the user types `BIO DEEP:` / `DEEP:` / full / dossier, or a Mode B/C verdict flips across the PoS range. A trade after the ticker (`BIO: FHTX 2.5P Jan @0.45`) means Math-check mode; `BIO DEEP:` with a trade means Math-check plus the deep-diligence modules at the DEEP budget. A LEAN card that is Mode B or C, or has the strike or BE within 10% of a floor, ends with one line: *→ BIO DEEP: TICKER for PoS / DCF / management.*
 
 - **One ticker per chat.** Every new message re-processes all earlier tool output, so long multi-ticker threads burn the usage limit. If this chat already holds two finished underwrites, answer the request, then end with one line: *New chat recommended for the next ticker (usage).*
 - **Search:** LEAN ≤ 2 `web_search_fast` per ticker (one combined catalyst + pipeline query, one financials fallback). Never `web_search` in LEAN. No image search, visualizer, memory reads or past-chat search unless asked.
@@ -96,9 +96,10 @@ Default mode is **LEAN**: `BIO: TICKER`, `LEAN: TICKER` or a bare ticker. Switch
 The user usually already has the fill. Verify his numbers; don't re-scout the chain.
 
 1. **Turn 1 (parallel):** quotes, fundamentals, filing index, financials search, pipeline + catalyst search. Skip IVR work unless he asks.
-2. **One `bio` run** with `short: {"strike", "fill"}` (delta if he has it), `pipeline`, `pfw` + `shares_src`, `pos` (baseline table; a range if soft → run both ends), and `pos_loa_after` when a DCF is in play.
-3. **Report:** Floor A / Floor B vs strike and vs BE (and vs cash-only A2), tier (1 / 1B / 3), BE, OTM %, ROC on cash (on extrinsic if ITM), binary EV, every catalyst date inside the contract, verdict. Flag any arithmetic in his message that disagrees with the calculator, showing both numbers.
-4. Budget ≤ 5 data calls (LEAN).
+2. **Delta**: if he didn't give one, quote that one contract (`get_option_instruments` with the expiry → `get_option_quotes`, 2 calls) — without delta the calculator can't price EV and the verdict defaults to DO NOTHING.
+3. **One `bio` run** with `short: {"strike", "fill", "delta"}`, `pipeline`, `pfw` + `shares_src`, `pos` (baseline table; a range if soft → run both ends), and `pos_loa_after` when a DCF is in play.
+4. **Report:** Floor A / Floor B vs strike and vs BE (and vs cash-only A2), tier (1 / 1B / 3), BE, OTM %, ROC on cash (on extrinsic if ITM), binary EV, every catalyst date inside the contract, verdict. Flag any arithmetic in his message that disagrees with the calculator, showing both numbers.
+5. Budget ≤ 7 data calls (LEAN), including the delta quote.
 
 ## Floor scan (several tickers)
 
