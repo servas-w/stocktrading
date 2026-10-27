@@ -1,24 +1,20 @@
 ---
 name: biotech-options-master-engine
-description: Institutional framework for biopharma equity analysis, cash floor modeling, SEC dilution auditing, management call forensics, clinical PoS evaluation, Mindgram-style quantitative intelligence, event-driven accrual auditing, inflated IV harvesting, and options underwriting, infused with an acerbic forensic hedge fund persona (the Shkreli reality check). Evaluates short puts across a 3-tier hierarchy (Tier 1 Fortress, Tier 2 Pre-Catalyst Harvest, Tier 3 Speculation Rejection) and asymmetric bearish setups (Mode C Short Alpha) while enforcing the Anti-CAPR rule (never shorting stocks priced for failure). Combines catalyst mapping, DTE cash burn formulas, IV deflation profit taking, Net Breakeven anchoring, and defined-risk spreads. Use when the user provides a biotech ticker, asks to audit or underwrite a biotech stock, evaluate drug PoS, analyze catalysts, audit earnings calls, calculate cash floors, evaluate dilution, structure short puts, or screen asymmetric trades.
+description: Deep institutional biotech options underwriting, triggered by "BIO DEEP: TICKER" (optionally with a trade, e.g. "BIO DEEP: FHTX 2.5P Jan @0.45") or by asking for a full, deep or dossier-level biotech audit. Fully diluted cash floors, SEC dilution and covenant audits, management call forensics, Bayesian drug PoS, napkin DCF, tri-scenario targets, Mode A/B/C underwriting across the 3-tier hierarchy, and the Anti-CAPR and False Dichotomy rules, with an acerbic Shkreli-style reality check. For a quick check ("BIO: TICKER" or a bare ticker) use biotech-bio-lite instead.
 allowed-tools: google google_finance
 ---
 # Biotech Options Master Engine
 
 The master institutional framework for evaluating clinical-stage biopharma equities, estimating empirical drug Probability of Success (PoS), pricing binary event tail-risk, harvesting inflated Implied Volatility (IV) Rank, modeling pro-rated distressed liquidation cash floors, auditing SEC dilution mechanics, evaluating Tier-1 specialist hedge fund ownership and insider financing backstops, and executing deep Out-of-the-Money (OTM) options underwriting across a calibrated 3-tier risk hierarchy.
 
-## When to Use
+## Deep Run Protocol (read first; overrides anything looser below)
 
-  - When the user provides a biotech ticker (e.g., `audit FHTX`, `underwrite CRBP`, `evaluate CNTB`, `biotech options on XYZ`, `calculate drug PoS for ABC`).
-  - When evaluating the clinical Probability of Success (PoS) of a therapeutic program based on published trial data, biomarker stratification, translational biology, and historical phase transition baselines.
-  - When performing pre-catalyst options underwriting (selling cash-secured or portfolio margin puts) heading into PDUFA dates, Advisory Committee (AdComm) meetings, or Phase 1/2/3 top-line clinical readouts.
-  - When executing asymmetric pre-catalyst volatility and theta harvests on high IV Rank biotech equities that expire safely prior to binary event readouts.
-  - When calculating catalyst-adjusted and DTE-pro-rated cash burn, liquidation floors, and distressed Sum-of-the-Parts (SOTP) net common equity values.
-  - When auditing SEC EDGAR filings for Pre-Funded Warrants, debt covenants, At-The-Market (ATM) facilities, Form S-3 shelf registrations, and secondary offering risk.
-  - When auditing the latest earnings call transcript and executive Q&A for management red flags, subtle timeline slippage, regulatory evasiveness, dilution cues, or analyst friction.
-  - When evaluating asymmetric short-alpha setups on overextended catalyst run-ups (Priced for Perfection with low empirical PoS <= 30%), while strictly enforcing the Anti-CAPR rule (never shorting stocks priced for failure).
-  - When assessing single-asset biopharma concentration and the viability of buying puts / defined-risk bear put debit spreads ahead of binary clinical catalysts.
-  - When managing active short puts through IV deflation, 50% profit targets, the 48-Hour Escape Hatch, and post-catalyst IV crush harvesting.
+1. **Gate before you gather.** First pull cash, debt, shares and the catalyst date (same 3 searches as `BIO:`). Stop with a 2-line NO-GO on the first hard fail: reverse split or bid-price deficiency pending, clinical-failure debt acceleration with cash ≤ debt (floor $0), runway < 6 months, or a bearish idea on a name priced for failure (Anti-CAPR).
+2. **Run only the stages the mode needs.** Mode A: Stages 1, 3, 4, 6, 7. Mode B: add Stage 2 (PoS), Stage 2B and Stage 5 (management). Mode C: add Stages 2, 2B, 2C, 2D and 6B. The napkin DCF (2C) and tri-scenario targets (2D) are for Mode B/C only; for Mode A, Bear = Floor A and Base/Bull are omitted.
+3. **Budget.** At most 10 searches. At the budget, stop and mark gaps UNVERIFIED. Never invent a figure the tools did not return (IV Rank, skew, open interest, 13F holdings, transcript quotes).
+4. **Optional trade.** If the user gives strike, expiry and credit, grade that trade; otherwise propose the max eligible strike and say a chain quote is needed.
+5. **Liquidity and IV are never vetoes.** Open interest < 150 or a spread > 25% is one ⚠️ line. IV Rank is context only; without a user-supplied IVR, write "IVR unverified" and use no IV-based PoP boost.
+6. **Output.** Use the Standard Master Output Layout, but drop any section whose stage was skipped (write "skipped: Mode A") instead of filling it.
 
 ## Core Philosophy: The Liquidating Bank Account & Volatility Edge
 
@@ -39,7 +35,8 @@ To avoid operational paralysis while enforcing strict capital protection, every 
 
   - **Tier 1: Fortress Cash Floor Underwriting (Event-Straddling or Deep Value)**:
       - The position holds through a binary clinical catalyst or operates as deep value.
-      - **Gross Strike Rule**: The nominal strike must sit strictly at or below the calculated worst-case liquidation cash floor ($\text{Strike} \le \text{Distressed Cash Floor}$). In a worst-case Class B clinical failure, common equity liquidation covers 100% of the strike.
+      - **Gross Strike Rule**: The nominal strike must sit at or below the Underwriting Strike Anchor for the event (Floor B = Formula A2 distressed cash floor + residual pipeline value). Print the cash-only A2 figure beside it whenever the trade leans on pipeline value.
+      - **Tier 1B (lower tier)**: strike above Floor B but Net Breakeven ≤ Floor B on an out-of-the-money strike. The premium, not the strike, sits on the floor; print the gap % and the minimum credit (Strike − Floor B).
   - **Tier 2: Asymmetric Pre-Catalyst Harvest (Pure Volatility & Theta Capture)**:
       - The options contract expires **safely prior ($\ge 14$ days) to the guided binary catalyst window**. Zero binary readout risk is borne during the holding duration.
       - **Net Breakeven Anchor Rule**: The position's **Net Breakeven** ($\text{Net Breakeven} = \text{Strike} - \text{Credit Collected}$) must sit strictly at or below the Underwriting Strike Anchor ($\text{Net Breakeven} \le \text{Anchor}$), and the nominal strike must be the lowest liquid strike available, backed by raw balance sheet cash per share with $>12$ months of cash runway.
@@ -67,34 +64,11 @@ For short-term options (30–60 DTE), do NOT penalize the balance sheet with mul
 
 The trade must possess positive mathematical expected value (+EV): $$\text{EV}_{\text{Contract}} = [\text{Trade PoP} \times \text{Net Premium}] - [(1 - \text{Trade PoP}) \times \text{Expected Downside Loss at Distressed Floor}]$$ *Rule: If EV is <= 0, the trade is a mandatory NO-GO.*
 
-### 6. Asymmetric Short-Alpha Architecture, Single-Asset Concentration & The Anti-CAPR Rule
+### 6. Bearish Trades: Anti-CAPR First
 
-While put underwriting harvests volatility on oversold or cash-cushioned assets, certain binary setups offer asymmetric short-alpha or put buying viability when clinical expectations disconnect from biological reality. However, bearish execution is governed by four strict institutional rules:
-
-#### Rule 1: The Anti-CAPR Rule (Priced-for-Failure Shorting Prohibition)
-
-  * **STRICT PROHIBITION**: NEVER short common equity or initiate bearish options on a stock that is already **"priced for failure"** (e.g., trading near or below its distressed cash floor, compressed enterprise value, depressed valuation multiples, or peak negative sentiment).
-  * *The CAPR Trap*: When market expectations are rock-bottom, asymmetry is heavily skewed to the upside. Any ambiguous data, unexpected surrogate biomarker signal, post-hoc subgroup promise, or FDA regulatory flexibility triggers an explosive short squeeze (+100% to +300%+ overnight gap-up). Shorting depressed biotechs is a negative-EV trap.
-  * *The "Priced for Perfection" Requirement*: Bearish short-alpha is strictly permitted ONLY when a stock has experienced an aggressive speculative run-up (>= 50%-150%+ into an event), trading at >3x-5x enterprise value above indication comps, and trading radically above its post-catalyst liquidation cash floor.
-
-#### Rule 2: Single-Asset Biopharma Concentration Audit
-
-  * **Single-Asset Biopharma Definition**: A company where a single clinical asset, lead indication, or core platform molecule accounts for **$\ge 80\%-90\%$ of total Enterprise Value** (e.g., Helus Pharma with CYB003, Capricor with deramiocel, Savara with molgramostim).
-  * **Class B Total Collapse Dynamics**: In a single-asset company, a clinical trial failure, complete response letter (CRL), or trial hold results in a **Class B catastrophic collapse to the distressed liquidation cash floor** (-70% to -90%+ gap-down overnight), because there is no secondary clinical platform to absorb operational overhead.
-  * **Multi-Program Platform Contrast**: Companies with multiple independent biological mechanisms (e.g., C4 Therapeutics with IKZF1/3, EGFR, and Merck partnerships; Foghorn with $168M cash and multiple chromatin targets) suffer only Class A partial drawdowns (-20% to -40%) on individual program setbacks, preserving residual enterprise value.
-
-#### Rule 3: Low Empirical PoS Gatekeeper (<= 30%) for Bearish Trades
-
-  * Forensic clinical diligence must confirm that the drug's empirical model-adjusted Probability of Success is **<= 30%** (e.g., unselected solid tumor cohorts, historical biological class failures, surrogate endpoint fragility, or severe therapeutic index toxicity). Buying puts or shorting against high-PoS proven biology (e.g., $\ge 50\%-75\%$ PoS) is negative-EV gambling on tail risk.
-
-#### Rule 4: Execution Vehicle Discipline (No Naked Binary Shorts)
-
-  * **Primary Vehicle: Defined-Risk Bear Put Debit Spreads (Event-Straddling)**:
-      - Buy ATM/ITM Put, Sell OTM Put anchored at the distressed cash floor.
-      - Risk is 100% capped at the net debit paid (zero overnight gap-up blowup risk), capturing a 60%-85% Class B collapse to cash with 3:1 to 5:1 reward-to-risk.
-  * **Secondary Vehicle: Tactical Momentum Exhaustion Short (Strict Pre-Event Exit)**:
-      - Shorting common shares during pre-data retail/momentum exhaustion.
-      - **MANDATORY 48-HOUR RULE**: Must Buy to Cover common shares **48 hours prior** to the guided data announcement window. Zero holding of naked short shares through binary data.
+  - **Anti-CAPR (never short what is priced for failure)**: no short stock or bearish options on a name near its distressed floor, with compressed EV or peak negative sentiment. Ambiguous data or FDA flexibility squeezes those +100–300% overnight.
+  - Bearish trades are allowed only when the stock is priced for perfection (run-up ≥ 50%, spot ≥ 3× Floor B), the lead is single-asset (≥ 80% of EV, so failure is a Class B collapse to cash) and model PoS ≤ 30%. Vehicle rules and the decision table are in Stage 6B.
+  - **No naked binary shorts**: a tactical equity short must be covered ≥ 48 hours before the guided data window.
 
 -----
 
@@ -107,11 +81,11 @@ While put underwriting harvests volatility on oversold or cash-cushioned assets,
       - **Mode A: Pre-Catalyst Theta & Volatility Harvest (Pre-Event Expiration)**:
           - Expiration date is strictly before the guided binary event window ($\ge 14$ days buffer).
           - Zero binary readout risk during holding duration.
-          - Evaluated under **Tier 2 Standards**: Net Breakeven $\le$ Underwriting Anchor, IV Rank $\ge 50\%$, OTM Cushion $\ge 35\%$, DTE-pro-rated burn.
+          - Evaluated under **Tier 2 Standards**: Net Breakeven $\le$ Underwriting Anchor, OTM Cushion $\ge 35\%$, DTE-pro-rated burn. IV Rank is context only.
           - Exit strategy: 50% GTC profit target or early IV deflation harvest.
       - **Mode B: Binary Event Underwriting (Event-Capturing Expiration)**:
           - Expiration date straddles the binary event announcement.
-          - Evaluated under **Tier 1 Standards**: Gross Strike $\le$ Distressed Cash Floor, rigorous Bayesian clinical PoS modeling, full multi-quarter catalyst burn penalty.
+          - Evaluated under **Tier 1 Standards**: Gross Strike $\le$ Floor B (Tier 1) or Net Breakeven $\le$ Floor B (Tier 1B), rigorous Bayesian clinical PoS modeling, full multi-quarter catalyst burn penalty.
       - **Mode C: Asymmetric Short Alpha / Bear Put Debit Spread (Priced for Perfection / Single-Asset Binary Collapse)**:
           - Stock has run up >= 50%-150% into data, trading at extreme valuation >3x cash floor.
           - Evaluated under **Short-Alpha Standards**: Passes Anti-CAPR filter (NOT priced for failure), Clinical PoS <= 30%, Single-Asset Concentration verified.
@@ -150,9 +124,11 @@ Benchmark against historical biopharma transition statistics:
 4.  **Safety, Tolerability & Therapeutic Window (-5% to -25%)**: Discontinuations, Grade 3/4 toxicities, prior clinical holds.
 5.  **Trial Design & Endpoint Rigor (+/- 5% to 10%)**: Double-blind randomized control vs. single-arm open-label.
 6.  **Big Pharma Partnership & Capital Endorsement (+5% to 12%)**: Co-development, opt-in rights, or equity financing from Tier-1 global pharma (Lilly, Merck, Novartis, Roche, etc.).
-7.  **Tier-1 Specialist Institutional Pedigree & Insider Financing (+3% to +5% Max)**: At least two Tier-1 biopharma specialist funds (Baker Brothers, OrbiMed, RA Capital, Perceptive, Deerfield, BVF Partners, RTW, EcoR1) collectively own $\ge 15\%$ of fully diluted common-equivalent shares AND participated in an equity financing, registered direct, or PIPE within the trailing 12 months (verifying fresh capital conviction rather than stale legacy Series A cost bases). Excludes passive indexers (Vanguard, BlackRock) and stale 13F holdings without recent financing participation.
+7.  **Tier-1 Specialist Institutional Pedigree & Insider Financing (factor +0.03 to +0.05 max)**: At least two Tier-1 biopharma specialist funds (Baker Brothers, OrbiMed, RA Capital, Perceptive, Deerfield, BVF Partners, RTW, EcoR1) collectively own $\ge 15\%$ of fully diluted common-equivalent shares AND participated in an equity financing, registered direct, or PIPE within the trailing 12 months (verifying fresh capital conviction rather than stale legacy Series A cost bases). Excludes passive indexers (Vanguard, BlackRock) and stale 13F holdings without recent financing participation.
 
-$$\text{Final Model Clinical PoS} = \text{Baseline PoS} \times \prod (1 + \text{Diligence Factor})$$
+$$\text{Final Model Clinical PoS} = \min\left(90\%,\ \text{Baseline PoS} \times \prod (1 + \text{Diligence Factor})\right)$$
+
+Each factor is a decimal (+0.10 = +10%). Use the midpoint of each range unless the evidence clearly supports an end. A class with > 80% historical failure caps PoS at 20–25%.
 
 #### Step 2B: The Biostatistics & Trial Rigor Gatekeeper (The Shkreli Audit)
 
@@ -214,9 +190,8 @@ Every biopharma evaluation must establish a rigorous, spreadsheet-grounded three
 In options underwriting, the probability of profit on the contract is distinct from clinical drug trial success:
 
   - **Mode A (Pre-Catalyst Harvest)**: $$\text{Baseline } P(\text{OTM}) = 1 - |\Delta| \quad (\text{typically } 85\%-92\% \text{ for deep OTM strikes})$$ Apply the **IV Rank Edge Multiplier**:
-      - If **IV Rank $\ge 50\%$**: $+5\%$ to $+8\%$ PoP boost (due to structural Volatility Risk Premium and early exit via IV deflation).
-      - If **IV Rank $\ge 70\%$**: $+10\%$ to $+12\%$ PoP boost. $$\text{Trade PoP}_{\text{Pre-Catalyst}} = \min(95\%, \text{Baseline } P(\text{OTM}) + \text{IV Edge Boost})$$
-  - **Mode B (Binary Event Underwriting)**: $$\text{Trade PoP}_{\text{Binary}} = \text{Final Model Clinical PoS} + \text{OTM Strike Buffer Benefit}$$
+      - Only when the user supplies a verified IV Rank: if **IV Rank $\ge 50\%$**, $+5\%$ to $+8\%$ PoP boost; if **$\ge 70\%$**, $+10\%$ to $+12\%$. Without a verified IVR the boost is 0. $$\text{Trade PoP}_{\text{Pre-Catalyst}} = \min(95\%, \text{Baseline } P(\text{OTM}) + \text{IV Edge Boost})$$
+  - **Mode B (Binary Event Underwriting)**: $$\text{Trade PoP}_{\text{Binary}} = \text{PoS} + (1 - \text{PoS}) \times \mathbb{1}[\text{Net Breakeven} \le \text{Floor B}]$$ A failed readout is a win only if the breakeven sits at or below the post-failure floor.
 
 -----
 
@@ -322,12 +297,12 @@ Verify pricing and volatility edge before staging orders:
 
 #### 2. Options Chain Liquidity & Slippage Gatekeeper
 
-Never underwrite options on illiquid, phantom chains where market maker spreads eat your statistical edge:
+Liquidity is information, not a gate:
 
-  - **Strike Open Interest (OI) Gatekeeper**: Target strike Open Interest must be **>= 150 contracts** (ideally >= 250). If OI < 100, disqualify the strike due to severe illiquidity and execution risk when triggering the 48-Hour Escape Hatch.
+  - **Strike Open Interest (OI) Warning**: Below 150 contracts, print one ⚠️ line (exits and the 48-Hour Escape Hatch may be slow). Never reject on OI: the user handles fills.
   - **Bid-Ask Spread Width Gatekeeper**: $$\text{Spread Width Ratio} = \frac{\text{Ask Price} - \text{Bid Price}}{\text{Midpoint}}$$
       - If Spread Width Ratio <= 20%: High liquidity; execute at midpoint limit.
-      - If Spread Width Ratio > 25%: Wide spread; model trade execution strictly at the **conservative side (Bid for selling puts, Ask for buying debit spreads)**, NOT midpoint. If net EV turns negative at conservative pricing, disqualify the trade.
+      - If Spread Width Ratio > 25%: Wide spread; use the user's fill if given, else show EV at both mid and the conservative side (Bid for selling puts, Ask for buying debit spreads) with a ⚠️. Never reject on spread width alone.
 
 #### 3. Strike Architecture & Expected Value (EV) Engine
 
@@ -360,6 +335,7 @@ Buying straight naked long puts or bear put debit spreads is strictly prohibited
 2.  **Low Empirical PoS Gatekeeper (PoS $\le 30\%$)**: Forensic clinical diligence must confirm that the drug’s empirical model-adjusted Probability of Success is $\le 30\%$. Buying puts against 100% human-validated biology or high-conviction Phase 3 programs ($\ge 50\%-75\%$ PoS) is negative-EV gambling on tail risk.
 3.  **Priced-for-Perfection Valuation**: Enterprise Value must trade at $>3\text{x}-5\text{x}$ above the post-catalyst distressed cash floor (satisfying the Anti-CAPR rule by NOT shorting a stock priced for failure).
 4.  **IV Rank Gatekeeper (Vehicle Selection)**:
+    - **No verified IV Rank** (the usual case here): default to the defined-risk bear put debit spread.
     - **If IV Rank < 40%**: Naked Long Puts are approved (cheap gamma purchase prior to speculative run-ups).
     - **If IV Rank $\ge 50\%-60\%$**: Naked long puts are **BANNED (Vega Trap)**. You MUST execute an asymmetric **Defined-Risk Bear Put Debit Spread** (Buy ATM Put, Sell OTM Put anchored at the distressed cash floor) to offload bloated volatility and neutralize post-catalyst IV crush.
 
@@ -419,11 +395,7 @@ Generate the complete institutional dossier using this exact structure:
 
 ### 🛑 MASTER UNDERWRITING METRICS & SCORECARD [APPROVED: TIER 1 FORTRESS PUT | APPROVED: TIER 2 PRE-CATALYST HARVEST PUT | APPROVED: MODE C ASYMMETRIC SHORT ALPHA | HARD REJECTION: TIER 3 SPECULATION]
 * **Trade Archetype & Mode**: [Mode A: Pre-Catalyst Theta/IV Harvest Put | Mode B: Binary Event Put Underwriting | Mode C: Asymmetric Short Alpha]
-* **Scenario Price Targets**: **Bear: $X.XX** | **Base / Neutral: $X.XX** | **Bull: $X.XX**
-* **Asset Concentration Profile**: [SINGLE-ASSET BIOPHARMA (>=80%-90% EV in lead asset) | MULTI-ASSET PLATFORM]
 * **Priced-for-Failure / Anti-CAPR Filter**: [PASS: Stock overextended >3x cash, NOT priced for failure | DISQUALIFIED: Stock priced for failure / CAPR Trap - DO NOT SHORT]
-* **Put Buying Viability Score**: [APPROVED: Mode C Bear Put Debit Spread | DISQUALIFIED: High PoS >30% | DISQUALIFIED: Vega Trap IVR >50% | DISQUALIFIED: Multi-Asset Resilience]
-* **Target Strike & Expiration**: [Strike, DTE, Expiration Date]
 * **Target Executable Credit / Debit**: [Midpoint credit/debit, Min executable limit, Net Breakeven]
 * **IV Rank & Volatility Edge**: [IV Rank %, IV Inflation PoP Multiplier %]
 * **Underwriting Strike Anchor**: [Calculated cash liquidation floor per share]
@@ -511,23 +483,14 @@ Generate the complete institutional dossier using this exact structure:
 
 ```
 
-## Gotchas
+## Gotchas (only items not already enforced above)
 
-  - **Never treat 13F hedge fund ownership as a substitute for trial rigor or cash floor safety**: Top biotech funds suffer 70%–90% binary wipeouts every single quarter. 13F filings lag reality by up to 45 days and often reflect legacy venture cost-bases ($0.10–$0.50/share) or hedged positions. Only apply the minor (+3% to +5%) Bayesian PoS boost if Tier-1 specialist funds participated in fresh financing within the trailing 12 months. Never allow institutional ownership to justify underwriting a Tier 3 speculative setup.
-  - **Never trust investigator-assessed response rates**: Always apply a mandatory 15%–20% haircut when modeling clinical PoS if trial data is not audited by Blinded Independent Central Review (BICR).
-  - **Audit debt covenants before assuming a cash floor**: If a venture debt or royalty agreement allows lenders to accelerate debt upon clinical failure, common equity liquidation floor is $0.00 regardless of reported balance sheet cash.
-  - **Enforce the ATM volume absorption ratio**: A biotech burning $15M/quarter with only $250k in daily trading volume cannot sustain a rally; ATM selling will dump into every green candle.
-  - **Never underwrite options on illiquid chains**: Strikes with <150 open interest or >25% bid-ask spreads trap you when triggering early profit harvests or the 48-Hour Escape Hatch.
-  - **Always apply Gross-to-Net (GTN) discounts**: Modeling drug revenues using US list prices without a 30%–40% statutory/commercial deduction (or 60%–75% ex-US/China) produces wildly inflated, invalid valuations.
-  - Never use basic shares when calculating the cash floor if pre-funded warrants (PFWs) exist. Always check Note 7 / Equity Disclosures in the 10-Q for unexercised PFWs.
-  - Always check venture debt credit agreements for minimum unrestricted cash covenants. A $20M minimum liquidity covenant cannot be returned to common equity in liquidation.
-  - Never confuse a Pre-Catalyst Harvest with an Event-Straddling trade. If the contract expires prior to the guided data release, do not apply multi-quarter binary collapse penalties.
-  - Selling high IV Rank is your primary statistical edge—always stage the 50% GTC limit order immediately upon execution to harvest IV deflation and theta early.
-  - Never underwrite options on management prepared remarks alone. Always inspect unscripted earnings call Q&A for subtle timeline slippage, evasive regulatory answers, or dilution cues.
-  - **The False Dichotomy Fallacy (Disqualified Put Underwriting != Valid Long Put)**: Rejecting a put-selling setup because strikes sit radically above the cash floor (Tier 3 Speculation) NEVER automatically justifies buying puts. When strike-to-cash distance is wide on a high-PoS or bloated asset, the default trade is NO TRADE / CASH. Buying naked puts into elevated IV Rank (>= 50%) on proven biology (~50%-75% PoS) is pure vega suicide. Long puts are strictly gated: only buy defined-risk bear put debit spreads when IV Rank is elevated AND clinical PoS <= 30% AND the asset is priced for perfection (>3x-5x cash floor) AND single-asset binary collapse dynamics apply. Never buy naked straight puts when IV Rank is >= 40%.
-  - **Single-Asset Biopharma Asymmetry**: When evaluating put buying, single-asset biopharmas carry clean, catastrophic Class B collapse downside to cash upon clinical failure. Multi-asset platforms have residual pipeline cushions that soften drawdowns and trigger post-event IV crush wipeouts on long puts.
-  - **The Anti-CAPR Rule**: Never short a biotech that is already priced for failure (trading near cash floor, low expectations, or depressed sentiment). When expectations are zero, even ambiguous data or regulatory flexibility sparks an explosive short squeeze. Only short names priced for perfection with massive run-up and low empirical PoS (<= 30%).
-  - **No Naked Binary Equity Shorts**: Never hold naked short common equity through binary clinical data readouts. Overnight gaps of 150%-300% cannot be stopped out in pre-market. Use defined-risk bear put debit spreads or enforce the mandatory rule to buy to cover 48 hours before data.
-  - If contract mathematical Expected Value (EV) is negative, do not execute even if the strike sits below cash.
-  - **Never Sell Covered Calls Into High-IV Binary Catalysts**: Selling covered calls into a binary clinical data release is a mathematically broken structure. It caps your upside at a modest premium while leaving you fully exposed to a 40%–70% equity collapse. If you want downside cushion, buy defined puts or exit; if you believe in the drug, hold uncapped equity/calls.
-  - **Chinese Biopharma Commercialization Realities**: Never value Greater China licensing rights at US/EU commercial multiples. China's NRDL price negotiation process slashes list prices by 60%–75%, meaning low double-digit royalties generate modest net cash flows. Always model China royalties through a discounted cash flow lens.
+  - **13F ownership is not safety**: specialist funds take 70–90% binary wipeouts; 13Fs lag up to 45 days. Apply the small PoS factor only for fresh financing participation in the last 12 months.
+  - **Pre-funded warrants**: never use basic shares (or Robinhood/finance-site share counts) for the cash floor; check the 10-Q equity note and any post-quarter 8-K or 424B5.
+  - **Debt covenants and acceleration** decide the floor before cash does: a minimum-liquidity covenant is not common-equity cash.
+  - **ATM wet blanket**: burn > 15% of quarterly dollar volume means every rally gets sold into.
+  - **Pre-catalyst vs event trades**: never apply multi-quarter collapse penalties to a contract that expires before the readout.
+  - **Stage the 50% GTC buy-to-close immediately** after any fill.
+  - **EV ≤ 0 is a NO-GO** even with the strike below cash.
+  - **Never sell covered calls into a binary**: capped upside, full downside.
+  - **China licensing**: NRDL cuts 60–75%; value royalties through a DCF, not US multiples.
