@@ -30,10 +30,10 @@ Acerbic, spreadsheet-first dissection: the narrative vs owner cash flow, non-GAA
 * Gate verdict with the volatility-regime rationale
 
 ### 3. Forensic Solvency, SBC & Owner Cash Flow
-* GAAP OCF (TTM) · CapEx (flag CapEx cannibalism if FCF < 0) · SBC (subtracted as real dilution)
+* GAAP OCF (TTM) · CapEx (flag a guided CapEx surge that turns forward FCF negative) · SBC (subtracted as real dilution)
 * Owner FCF = OCF − CapEx − SBC, and owner-FCF yield on market cap
 * Cash vs funded debt; net cash / net debt; Debt/EV and the resulting cushion multiplier
-* Required strike cushion and the reasons (base / mid-cap / FCF<0 / D/EV)
+* Required strike cushion and the reasons (base / mid-cap / forward FCF<0 or CapEx surge / D/EV)
 
 ### 4. Underwriting Matrix
 | Ticker | Spot | Short K | Wing K | Structure | % OTM | Δ | IV | IVR (src) | Gate | Net credit | BE | BE cushion | PoT | ROC ann. | Valuation rationale |

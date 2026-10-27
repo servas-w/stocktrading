@@ -29,8 +29,8 @@ Sell fear, not hope. A short put is an IV mean-reversion trade: you must be paid
 
 - Market cap < $10B → out of scope. Clinical-stage biotech with a binary inside the contract → use `BIO:`.
 - Structural impairment (patent cliff, lost franchise, fraud, going-concern, distress dividend cut) → NO-GO regardless of IV.
-- Next earnings ≤ 7 calendar days away → BLOCKED until after the report.
-- Verified IVR < 30 → NO-GO → Pullback Watchlist.
+- Next earnings ≤ 7 calendar days away → WATCHLIST (blocked until after the report).
+- Verified IVR < 30 → WATCHLIST (options too cheap; re-check when IVR ≥ 50).
 - 1–10 sessions after earnings with verified IVR < 35 → NO-GO (Anti-ORCL: post-crush scrap).
 - TTM owner FCF ≤ 0 → NO-GO (banks, brokers, insurers: write "forensics n/m (financial)" and skip this gate).
 
@@ -50,7 +50,7 @@ Sell fear, not hope. A short put is an IV mean-reversion trade: you must be paid
 - **GO**: verified IVR ≥ 50, CLEAN or spread for HAZARD, all gates pass, cushion met.
 - **CONDITIONAL**: IVR 30–50 and either P/E < 10, yield > 3.5% or a defined-risk spread; or IVR UNVERIFIED or SBC missing with everything else passing.
 - **WATCHLIST**: quality name but IVR < 30, or blocked by earnings timing.
-- **NO-GO**: any hard gate.
+- **NO-GO**: any other hard gate (out of scope, structural impairment, Anti-ORCL, owner FCF ≤ 0), or the cushion can't be met at any listed strike.
 
 End the card with **→ LC DEEP: TICKER** when the trade needs a chain-based wing quote, the name is a weekly-EMA pullback (RS setup), Debt-to-EV > 25%, IVR is within 5 points of 30/35/50, or the user asks for the full dossier.
 
