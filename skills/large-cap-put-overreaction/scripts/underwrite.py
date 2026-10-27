@@ -162,7 +162,8 @@ def buy_fill(L):
 def oi_gate(oi):
     if oi is None:
         return UNK
-    return OK if oi >= 150 else (WARN if oi >= 100 else NO)
+    # liquidity is information only: the user handles fills, so thin OI warns but never rejects
+    return OK if oi >= 150 else WARN
 
 
 def rule7(cls, default):
@@ -331,6 +332,7 @@ def lc(x):
     if mcap is None and f(x.get("shares")) and S:
         mcap = f(x.get("shares")) * S
     ocf, capex, sbc = f(x.get("ocf_ttm")), f(x.get("capex_ttm")), f(x.get("sbc_ttm"))
+    fcf_fwd, capex_surge = f(x.get("fcf_fwd")), bool(x.get("capex_surge"))
     cash, debt = f(x.get("cash")), f(x.get("debt"))
     pe, dy, low52 = f(x.get("pe")), yld(x.get("div_yield")), f(x.get("low_52w"))
     missing, gates = [], []
@@ -384,9 +386,10 @@ def lc(x):
             elif ocf <= 0:
                 universe = NO
                 why.append("mid-cap needs OCF > 0")
-    if fcf is not None and fcf < 0:
+    # TTM owner FCF <= 0 is already a hard reject; the 30% cushion is for a forward CapEx surge on a name that still passes
+    if (fcf_fwd is not None and fcf_fwd < 0) or capex_surge:
         req = max(req, 0.30)
-        why.append("FCF<0 (CapEx cannibalism/burn) -> 30%")
+        why.append("forward FCF<0 / CapEx surge -> 30%")
     if dev is not None and dev > 0.25:
         req = req * (1 + 1.5 * dev)
         why.append(f"D/EV {p(dev)} >25% -> x{1 + 1.5 * dev:.2f}")
@@ -504,8 +507,6 @@ def lc(x):
         v = "INCOMPLETE: IVR gate not failed - pull the chain (use `strikes`) and rerun with the short leg"
     elif cush_ok == NO:
         v = f"REJECTED at this strike -> move to <= {m(max_k)} (required cushion {p(req)})"
-    elif oi_gate(sh["oi"]) == NO:
-        v = "REJECTED: illiquid strike (OI < 100)"
     elif st == "YELLOW":
         v = "CONDITIONAL (Hedged Only)" if yellow_ok else "REJECTED unless converted to a defined-risk spread"
     elif st == "UNVERIFIED":

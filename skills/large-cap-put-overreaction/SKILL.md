@@ -111,12 +111,12 @@ Verdicts: READY (grade A/B) → IV gate + full `lc` · READY-C (weak hold) → s
 - Banks, brokers, insurers: OCF is distorted by lending/trading flows — omit OCF/CapEx inputs and write "forensics n/m (financial)".
 
 **Structure rules** (`lc` checks them):
-- Short strike: listed strike with Δ −0.10 to −0.15 that also clears the required cushion — 15% base; 25% for $5–20B mid-caps (which also need OCF > 0; < $5B is out); 30% when FCF < 0 (CapEx cannibalism); × (1 + 1.5·D/EV) when D/EV > 25%. Cushion beats delta: go further OTM rather than breach it.
+- Short strike: listed strike with Δ −0.10 to −0.15 that also clears the required cushion — 15% base; 25% for $5–20B mid-caps (which also need OCF > 0; < $5B is out); 30% when guided or forward FCF turns negative from a CapEx surge on a name whose TTM owner FCF still passes (pass `"fcf_fwd"` or `"capex_surge": true`; TTM owner FCF ≤ 0 is already a reject); × (1 + 1.5·D/EV) when D/EV > 25%. Cushion beats delta: go further OTM rather than breach it.
 - Owner FCF (OCF − CapEx − SBC) ≤ 0 → REJECT (NO-GO), same bar as `lot`. Financials with OCF omitted show the gate as UNVERIFIED, not failed.
 - Probability of Touch ≈ 2|Δ|: state it upfront so a normal intra-cycle touch doesn't trigger panic rolls.
-- Pennies for Parachutes: quote a wing 40–60% below spot (liquid strike, OI ≥ 100). Wing ask ≤ 5% of the short mid → spread is mandatory; otherwise optional (`force_spread: true` to model it anyway).
+- Pennies for Parachutes: quote a wing 40–60% below spot (thin OI is a ⚠️, not a reason to skip it). Wing ask ≤ 5% of the short mid → spread is mandatory; otherwise optional (`force_spread: true` to model it anyway).
 - Floor check: BE should sit at/below the 52-week low or at a BE-implied EV/owner-FCF at/below the stock's own trough multiple. When the verdict hinges on it (or the user says "with VALU"), run the stock-valuation-engine skill in LC mode (reuses this chat's spot, SBC, cash, debt, earnings; ≤ 6 extra calls, outside this skill's budget) and pass its `VALU_HANDOFF` values as `"val_floor"` and `"val_implied_g"` in the `lc` JSON. BE above `val_floor` → max CONDITIONAL. Quote the implied growth in the reality check.
-- Fills: width ≤ 20% of mid → mid; 20–25% → halfway to bid; > 25% → bid. OI ≥ 150 pass, 100–149 warn, < 100 fail.
+- Fills: width ≤ 20% of mid → mid; 20–25% → halfway to bid; > 25% → bid. OI ≥ 150 pass, < 150 ⚠️ warn only: the user handles fills, so liquidity never rejects a trade.
 
 **Sell-off triage** (one sentence in the card): transient sentiment (guidance timing, macro rotation, debt-issuance noise, downgrade) → tradeable. Structural impairment (patent cliff, lost franchise, fraud, going-concern, dividend cut from distress) → REJECT regardless of IVR.
 
@@ -129,7 +129,7 @@ Verdicts: READY (grade A/B) → IV gate + full `lc` · READY-C (weak hold) → s
  "short":{"strike":160,"bid":2.40,"ask":2.50,"delta":-0.12,"oi":4200},
  "wing":{"strike":100,"bid":0.08,"ask":0.11,"oi":900},
  "ocf_ttm":9e9,"capex_ttm":3e9,"sbc_ttm":1.5e9,"cash":6e9,"debt":1.2e10,
- "mcap":8e10,"pe":22,"div_yield":0.8,"low_52w":150}
+ "mcap":8e10,"pe":22,"div_yield":0.8,"low_52w":150,"fcf_fwd":null,"capex_surge":false}
 ```
 Barchart instead: replace the IV keys with `"ivr":58,"ivp":81,"ivr_src":"barchart"`. Proxy: `"ivr":52,"ivr_src":"OAS proxy","iv30":45,"atm_iv":44`.
 `strikes`: `{"spot":200,"iv":45,"dte":86,"inc":5}` (add `"skew":1.0` if `iv` is already the OTM strike's IV). Units: IV/HV as % or decimal; IVR in points; dollars raw.
