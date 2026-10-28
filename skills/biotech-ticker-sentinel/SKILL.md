@@ -1,6 +1,6 @@
 ---
 name: biotech-ticker-sentinel
-description: Keeps a Google Sheet watchlist of biotech tickers that Wilson adds and removes by hand, and for every ticker on it reports (1) any new news or SEC filing, (2) the day's price move and the most likely reason for it, and (3) options IV, put and call skew and term structure read against the next catalyst, naming the specific put contract when a setup is worth selling premium into. Use when the user says create my watchlist, run the sentinel, check my watchlist, any news on my biotechs, why is TICKER moving, IV check or skew check, and for the scheduled daily run.
+description: Keeps a Google Sheet watchlist of biotech tickers that Wilson adds and removes by hand, and for every ticker on it reports (1) any new news or SEC filing, (2) the day's price move and the most likely reason for it, and (3) options IV, put and call skew and term structure read against the next catalyst, naming the specific put contract when a setup is worth selling premium into. Use when the user says create my watchlist, run the sentinel, check my watchlist, any news on my biotechs, why is TICKER moving, IV check or skew check, and for the scheduled daily run and the hourly breaking-news watch that emails Wilson when urgent news lands.
 ---
 
 # Biotech Ticker Sentinel
@@ -20,7 +20,7 @@ No portfolio audits, no position management, no orders.
 - **Don't invent a reason for a move.** If nothing explains it, say `no identifiable catalyst`.
 - **Read IV as the page shows it.** You can't calculate IV. Only divide, subtract and compare displayed numbers, and show the inputs to every ratio so Wilson can check them.
 - **Times**: ET and Da Nang. Da Nang is ET+11 during US daylight time and ET+12 otherwise. US clocks change on the second Sunday of March and the first Sunday of November.
-- **Read-only**: never place orders and never log into brokerage accounts.
+- **Read-only**: never place orders and never log into brokerage accounts. The only outbound action allowed is the breaking-news email to Wilson's own Gmail.
 
 ## Fixed data sources (use the same ones every run so numbers compare)
 
@@ -42,7 +42,7 @@ If the target strike fails, step one strike at a time toward at-the-money, stayi
 
 ## The watchlist (Google Sheet)
 
-**`create my watchlist [tickers]`** creates a Google Sheet named **Biotech Sentinel** with two tabs. If the sheet already exists, open it instead.
+**`create my watchlist [tickers]`** creates a Google Sheet named **Biotech Sentinel** with three tabs. If the sheet already exists, open it instead.
 
 **Tab `Watchlist`**: Wilson adds and deletes rows by hand.
 
@@ -61,6 +61,11 @@ If the target strike fails, step one strike at a time toward at-the-money, stayi
 
 - A ticker's most recent row is its **baseline**. With no row, the baseline is `none (first run)`.
 - If the sheet can't be written, say so at the top of the report and carry on.
+
+**Tab `Alerts`**: you append one row per email sent. It stops the same news being emailed twice.
+
+| Sent (ET) | Ticker | Item (form type or headline) | Link | Status |
+|---|---|---|---|---|
 
 ## Each run
 
@@ -176,12 +181,47 @@ A ticker with no news, no big move and no flags gets its block and nothing else.
 
 **Schedule**: 4:30 AM Da Nang, Tuesday to Saturday. That's always after the US close: 4:30 PM ET in US winter, 5:30 PM ET in summer.
 
+## Breaking-news watch (email alerts)
+
+A light, news-only check that runs often. It costs little and stays silent unless something urgent happens.
+
+**Schedule**: hourly, 7:00 PM to 6:00 AM Da Nang, from Monday evening to Saturday morning. That covers 7 AM–6 PM ET in US winter and 8 AM–7 PM ET in summer, so it catches pre-market and after-close releases, when biotechs usually publish. If Spark can't schedule hourly, use every 2 hours.
+
+**Each watch run**:
+1. Read the `Watchlist` tab (skip `pause` rows) and the `Alerts` tab.
+2. For each ticker, run **step 1 (News) only**, with the window = since the last watch run.
+   - Skip price-move explanations and the full IV work.
+3. Also check the price, and alert if it is ±8% or more from the previous close, even with no news found.
+   - The email then says `no identifiable catalyst yet`.
+4. **Email only if** there's a 🔴 item or that ±8% move.
+   - **Skip it** if the same filing or headline is already in `Alerts`.
+   - If the item is a follow-up (e.g. the 424B5 pricing after the S-3), it's a new item: send it.
+
+**Email** to Wilson's own Gmail (the account Spark is signed into):
+- **Subject**: `🔴 SENTINEL · TICKER · <what happened> · <time ET>`
+  - e.g. `🔴 SENTINEL · XYZ · CRL received (8-K) · 4:05 PM ET`
+- **Body**, 10 lines or fewer:
+  1. **What happened**, in one sentence, with the link.
+  2. **When**: ET and Da Nang time.
+  3. **Price reaction so far**: last price and % vs the previous close, and whether it's in pre-market, regular or after-hours trading.
+  4. **Front-month ATM IV** now, vs the last `Log` row, if quickly available.
+     - Otherwise `IV: next full run`.
+  5. **What it changes**: the next catalyst on the `Watchlist` tab (cancelled, moved, now done) and any financing overhang.
+  6. A footer: `Sentinel alert. Not advice. Nothing was traded.`
+- **Several tickers in the same run**: send one email with one block per ticker.
+- **After sending**, append each item to `Alerts`.
+  - If the email fails, send a Spark notification instead and log `Status = email failed`.
+
+No email when nothing urgent happened: silence means nothing happened. The 4:30 AM daily run still covers everything in full.
+
 ## Commands
 - `create my watchlist [tickers]`: create or open the sheet and seed it.
 - `run the sentinel`: the full run on every listed ticker.
 - `check TICKER`: one ticker now, on the list or not. Don't add it.
 - `why is TICKER moving`: news and price only.
 - `IV check` / `skew check`: step 3 only, for every listed ticker.
+- `news watch`: one breaking-news watch run now (emails only if something urgent turns up).
+- `test alert`: send one sample email marked TEST, to confirm email works.
 
 ## Thresholds (starting values; Wilson tunes them)
 - **Big move**: ±8%, or 3× average volume.
@@ -195,3 +235,4 @@ A ticker with no news, no big move and no flags gets its block and nothing else.
 - **CHEAP**: IV Rank under 25.
 - **Usable contract**: spread ≤ 35% of mid, OI ≥ 25 or volume > 0, put/call IV within 20 points at-the-money.
 - **Contract search**: 25–35% out of the money, back expiry 60–90 days.
+- **Email alert**: any 🔴 item, or a move of ±8% or more vs the previous close.
