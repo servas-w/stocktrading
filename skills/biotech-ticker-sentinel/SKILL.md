@@ -1,99 +1,120 @@
 ---
 name: biotech-ticker-sentinel
-description: Daily monitor and breaking-news flash for Wilson's biotech watchlist (CAPR, ACRS, MGNX, CMPX) or any single biotech ticker. Opens with a verified per-ticker news status (NEW NEWS / NO NEW NEWS / UNVERIFIED) and an IV-movement line against a logged baseline, then reconciles live Robinhood short puts, held shares and resting orders against Playbook v2, overlays every leg on the catalyst calendar with the market-implied event move, and recomputes cash floors from SEC filings with a bundled calculator. Use when the user says sentinel, run the sentinel, SENT: TICKER, biotech watchlist check, any news on CAPR/ACRS/MGNX/CMPX, how's IV on my biotechs, or asks about a short put through a PDUFA or readout.
+description: Monitors only the biotech tickers Wilson names (default list in references/watchlist.md, e.g. CAPR, ACRS, MGNX, CMPX) and reports, per name, whether there is new news or a new filing (with proof of what was checked), how options IV moved against the last report, what catalyst is coming and which expiries it hits, and what that means for his position on that name. Use when the user says sentinel, run the sentinel, SENT: TICKER, monitor TICKER, watch these names, any news on TICKER, or how's IV on TICKER. Not a portfolio audit; the Claude War Room / book-audit skills do that.
 ---
 
 # Biotech Ticker Sentinel
 
-This is a monitor, not a full underwriting. Each run answers four questions, in this order:
-1. What changed since the last run (news, filings, IV, OI)?
-2. Is any leg on the book now in trouble?
-3. Does a catalyst land inside a leg's life, and is the premium paying for it?
-4. Has the cash floor moved?
+**One job: watch the names Wilson tells you to watch, and say what changed.** Nothing else. No whole-portfolio audit, no NAV maths, no trade ideas on names he didn't list.
 
-Full first-time SOTP/rNPV underwriting of a new name belongs to the biotech underwriting skill (Floor A/B, PoS). The Sentinel refreshes the numbers and flags when a deep audit is needed.
+**Which names**:
+- If the message names tickers (`SENT: FHTX`, `monitor CAPR ACRS`), watch exactly those.
+- Otherwise use the default list in `references/watchlist.md`.
+- If he says add or drop a name, do it for this run and remind him to update the default list.
 
-## Data integrity rules (these override everything below)
+## Rules that override everything
 
-- **Every number carries its source and timestamp** (e.g. `RH quote 10:42 ET`, `10-Q 6/30/26`, `IBKR IVP`). If a number wasn't retrieved this run, print `n/a` and never estimate, interpolate or reuse a remembered value.
-- **Links**: only URLs actually returned by a tool this run. No constructed or remembered URLs.
-- **Negative claims need receipts.** `NO NEW NEWS` is allowed only when every source in Step 1 was checked. If any source failed, print `UNVERIFIED (<source> failed)`.
-- **Math and date math go through `scripts/sentinel_calc.py`** (`overlay`, `event-move`, `book`, `leg`, `floor`). Don't do arithmetic, DTE counts or weekday lookups in your head. Pass JSON on stdin (example below). If the script can't run, show the formula and inputs so the user can check.
-- **Times**: print ET and Da Nang time (ICT, UTC+7). Convert with a real time zone (America/New_York), never a fixed offset: Da Nang is ET+11 during US daylight time and ET+12 after it ends (Nov 1, 2026). Note whether the US market is open; outside regular hours, option quotes and IV are stale and must be labeled `stale (after hours)`.
-- **Tool names**: Robinhood tools may carry a connector prefix (e.g. `custom_mcp__get_accounts`). Use whichever name is exposed.
-- Mask the account (`••••6081`). Never use Gmail for positions. Don't use the Robinhood equity news feed as a news source.
+1. **No made-up numbers.** Every figure gets a source and time (`RH 10:42 ET`, `10-Q 9/30/26`). If you didn't fetch it this run, write `n/a`.
+2. **No made-up links.** Use only URLs a tool returned this run.
+3. **"No news" needs proof.** For each source, show the newest item you found and its date (e.g. `SEC: latest 8-K 10/22`). If a source failed, the status is `UNVERIFIED`, not `NO NEW NEWS`.
+4. **No mental math.** Use `scripts/sentinel_calc.py` for IV interpolation, dates, event moves, cushions and floors. In a Python sandbox, `import sys; sys.path.insert(0, 'scripts'); import sentinel_calc as c` and call `c.iv30({...})`, `c.overlay({...})`, `c.event_move({...})`, `c.position({...})` or `c.floor({...})`. From a shell, run `python3 scripts/sentinel_calc.py <command> '<json>'`. If neither works, show the formula and inputs.
+5. **Times in ET and Da Nang.** Use a real time zone for ET (America/New_York). Da Nang is ET+11 until Nov 1, 2026, then ET+12. Outside US market hours, label quotes `stale (after hours)`.
+6. **Read-only.** Mask the account (`••••6081`). Never use Gmail for positions. Never place, change or cancel orders.
 
-Calculator call pattern (keep `EOF` at the start of its line):
+## Per name, every run
 
-```bash
-python3 scripts/sentinel_calc.py book <<'EOF'
-{"nav": 250000, "as_of": "2026-10-28", "positions": [{"ticker": "CAPR", "spot": 6.1, "held_shares": 0, "legs": [{"strike": 4, "credit": 0.55, "qty": 10, "expiry": "2026-12-18", "mark": 0.40, "delta": -0.18}]}]}
-EOF
-```
+### 1. News: did anything happen?
+**Window**: since the last Sentinel report. If none can be found, since the prior 4:00 PM ET close; on Mondays, since Friday's close.
 
-## Step 0: Load state
+**Sources**:
+- (a) SEC filings: Robinhood `get_sec_filing_index`, or EDGAR.
+- (b) Company IR press releases.
+- (c) A web/news search for the ticker and its lead drug.
+- (d) For a pending clinical or FDA event: ClinicalTrials.gov last-update date, and FDA/AdComm notices.
 
-- Read `references/watchlist.md`. If it's more than 14 days old or a listed date has passed, flag it in the banner and refresh it.
-- Read the **Sentinel Log** (Google Sheet or Doc in Drive; create it if missing). It holds one row per ticker per run: `run_ts_ET | ticker | spot | front ATM IV | 30-45D ATM IV | post-catalyst ATM IV | IV at each held strike | OI at each held strike | IVP 52w (source) | last news item id/date | net cash/share now | floor source filing + date`. Its last row per ticker is the **baseline**. With no row, the baseline is `none (first run)`; never invent one.
-- Scope = the four watchlist tickers, plus any requested ticker, plus any other biotech with an open leg on the account.
+Write one of three statuses:
+- `NEW NEWS / FILING`: what it is, the ET time, the link, and one line on why it matters.
+- `NO NEW NEWS since <time>`: list the newest item found per source.
+- `UNVERIFIED (<source> failed)`.
 
-## Step 1: News status (one line per ticker, all of them, every run)
+**Mark 🔴 (urgent)** for any of these:
+- offering, ATM use or shelf (S-3/424B5)
+- FDA action, CRL, PDUFA date change or clinical hold
+- topline data
+- debt default, restructuring or going-concern language
+- a 13D
+- an insider buying or selling on the open market (Form 4; ignore 10b5-1 sales and tax withholding)
 
-Window = since the previous run's timestamp in the log. With no log, use the prior 4:00 PM ET close, and on a Monday extend it back to Friday's close. Check, per ticker:
-1. **SEC filings**: Robinhood `get_sec_filing_index` or EDGAR (8-K and item number, 10-Q/K, S-3, 424B5, Form 4, 13D/G, SC TO, DEF 14A).
-2. **Company IR press-release page**.
-3. **Web/news search** for the ticker and its lead asset, limited to the window.
-4. **Regulatory/clinical** where relevant: ClinicalTrials.gov last-update date on the lead NCTs, FDA/CBER actions or AdComm calendar, and congress abstract releases.
+### 2. IV: did the options market react?
+- Pull ATM put IV for the expiries around 30 days (`get_option_chains` → `get_option_instruments` → `get_option_quotes`, using mids). Run `iv30` with the last report's IV30 as `baseline_iv30`.
+- **Use the IV30 change, not the front month.** The front month changes contract as it rolls, which makes the change meaningless.
+- Also show IV at each strike you hold, against the last report.
+- **IV Rank/Percentile** only if a source publishes it (IBKR, or Barchart if Wilson supplies it); otherwise write `IVR unverified`.
+- **Open interest** updates overnight, so compare it to the previous day only.
+- Ignore quotes whose bid-ask spread is wider than 30% of the mid, and strikes priced under $0.10.
+- **Name the driver**: a run-up into the event, a post-event crush, OPEX pinning, offering fear, or `no clear driver`. Don't invent one.
 
-Output: `NEW NEWS / FILING` (what, when in ET, link, and a one-line "so what" for the floor or the leg), `NO NEW NEWS (since <ts>; SEC ✓ IR ✓ Web ✓ CT.gov ✓)`, or `UNVERIFIED`.
+### 3. Catalyst: what's coming, and which expiries does it hit?
+- Take the next event from `references/watchlist.md` and confirm it against the company's latest 8-K, 10-Q or IR page.
+- Run `overlay` with every listed expiry, weeklies included, plus market holidays (2026: Nov 26, Dec 25).
+- **Reading the overlay status**:
+  - `ambiguous` (weekend/holiday decision date) and `in_window` (open-ended guidance like "4Q26") count as carrying the event.
+  - `before` still faces early-action risk.
+- Run `event_move` with the pre-event IV, the post-event IV and the post-event expiry. Then add, for each short put that carries the event:
+  - `strike`, `credit` and `qty`
+  - **`fail_level`**: where the stock likely trades if the event fails. Use cash per share from `floor`, unless a better analog (a past CRL or failed readout) is cited.
+- **Report**:
+  - the implied move %
+  - `move_test`
+  - `if_event_fails` (whether the put ends in or out of the money, and the $ loss)
+- The failure case is the one that matters for a binary, because the average move understates it.
 
-**Materiality tags.** Mark 🔴 for: offering or ATM use (S-3/424B5/8-K 1.01 financing), CRL, approval, PDUFA change, clinical hold, topline data, debt default or covenant, restructuring or going-concern language, 13D, or an insider **open-market** Form 4 (ignore 10b5-1 and tax withholding). Any 🔴 item triggers Flash mode.
+### 4. Your position on this name
+- Pull only this ticker from Robinhood: `get_option_positions` (non-zero, all pages) → `get_option_instruments`, then `get_option_quotes`, `get_equity_positions` and resting `get_option_orders`.
+- Run `position`. Include long puts as `type: long_put` (for example, calendar back-month hedges).
+- **Report**:
+  - each leg: breakeven, cushion, % captured, DTE, flags
+  - the hedge ratio
+  - any stock flags (Anti-CAPR, 15% short stop, underwater lot)
+  - stale resting orders: a buy-to-close below intrinsic, or far from the mid
+- **No position**: write `no position` and skip this step.
 
-## Step 2: IV and microstructure (one line per ticker, right under the news line)
+### 5. Cash floor: only when it changed
+- Rerun `floor` only if a 10-Q/10-K, a financing, a cash event (asset sale, milestone) or debt news landed in the window, or Wilson asks. Otherwise repeat the last report's floor with its filing date.
+- Q3 10-Qs land in early-to-mid November, so expect a refresh then.
+- **Inputs**:
+  - cash, equivalents and marketable securities
+  - cash inflows since the quarter end
+  - operating cash burn (not net loss)
+  - debt at principal plus exit fees
+- **Shares**: basic, pre-funded warrants, shares issued since, convertibles, and options/warrants counted by treasury-stock method at the short strike.
+- `cash_per_share` matches the convention of the other audits; `net_of_debt_per_share` is the stricter view.
 
-First run `sentinel_calc.py overlay` for each ticker's next catalyst, using every listed expiry including weeklies, plus market holidays (2026: Nov 26, Dec 25). That tells you which expiry is pre-event and which is post-event. Then pull with `get_option_chains` → `get_option_instruments` → `get_option_quotes`:
-- **Front ATM put IV** (nearest monthly ≥ 7 DTE), **30-45 DTE ATM IV**, and the **first post-catalyst expiry ATM IV**. Use the mid, and flag any contract whose bid-ask is more than 30% of mid as `wide` and not IV-reliable. Don't read IV off sub-$0.10 deep-OTM strikes.
-- **IV at each held strike** vs baseline: `+/- pts`.
-- **IVR/IVP**: only from a source that publishes it (IBKR IV Percentile 52w/26w; Barchart if the user supplies it). Robinhood gives per-contract IV only. Otherwise print `IVR unverified`.
-- **OI**: OI updates once overnight (OCC). Compare to the previous trading day's logged OI only, never intraday. Flag ≥ 25% OI change at a held strike or a block trade above 3× average daily volume.
-- **Driver**: name one: pre-event expansion, post-event crush, OPEX pinning, offering fear, or no clear driver. Don't make one up.
+## Output
 
-Format: `CMPX · spot $X (+y%) · Front put IV 182% (+11 vs 10/27) · 45D 165% · Post-cat n/a · IVP52 71 (IBKR) · OI $1P +2.1k · Driver: …`
+- **Top of every output: the banner.** One block per name, each name every time. The values below are made-up examples, never real data:
+  ```
+  CMPX · NO NEW NEWS since 10/27 16:00 ET (SEC: 8-K 10/22 · IR: PR 10/14 · Web: nothing new) · 🔴 none
+  IV30 165% (+11 vs 10/27) · $1P IV 182% (+9) · IVR unverified · OI $1P +2.1k · Driver: no clear driver
+  Next: full COMPANION-002 data, date TBD → in_window for Nov/Dec · Position: 10x Jan $1P, cushion 38%, no flags
+  ```
+- **Then, only for names with something to say**: the news detail, the catalyst/expiry table, the position table and the floor. If nothing happened, say `Nothing changed` and stop.
+- **Staged order**, only when news or a flag calls for one: ticker, action, qty, limit, time-in-force, and a one-line reason. End with `Proposal only. Nothing was placed.`
+- **Delivery**:
+  - **Scheduled daily run**: a Google Doc with the banner, the details and the baseline block. Post the link plus the banner in chat.
+  - **Any 🔴 item, a ±8% move or a ±15-point IV30 move**: a chat flash of 12 lines or fewer, banner first.
+- **Baseline block** (the last thing in every report), one line per name (example values):
+  ```
+  BASELINE CMPX | 2026-10-28 16:05 ET | spot 1.42 | iv30 1.65 | strikeIV 1.00P=1.82 | OI 1.00P=12400 | cash/sh 0.61 (10-Q 6/30) | last news 8-K 10/22
+  ```
+  The next run reads this from the previous report (the Doc or the chat). If it can't find one, the baseline is `none (first report)`.
 
-## Step 3: Book reconciliation (Robinhood, live)
-
-- `get_accounts` → ••••6081. `get_option_positions` (non-zero, **all pages**) → `get_option_instruments` for strike and expiry. `get_option_quotes` for mark, delta and IV. `get_equity_positions` for held and short shares. `get_option_orders` / `get_equity_orders` for resting orders and today's opening tickets. Pull positions every run; never reuse a contract list from an earlier run.
-- Run `sentinel_calc.py book` **once** with every name: spot, held shares (negative = short), and each leg's strike, long_strike for spreads, credit, qty, expiry, mark and the short contract's delta. It returns per-leg breakeven, cushion %, captured %, max loss and alarms, plus per-name exposure (held shares + all leg max losses) against the 10% NAV cap, sorted by $ at risk. Don't run `leg` separately per leg, or the NAV cap misses the other legs.
-- **Playbook v2 alarms** (from the calculator, plus these checks):
-  - ITM, delta ≤ -0.30, or spot within 7% of strike → defense per Playbook v2 (roll out-and-down, or close).
-  - ≤ 21 DTE and near the money → act now. Never carry an ITM short into expiration without a buy-to-close limit at or above intrinsic and at or near the **ask**. A BTC limit below intrinsic will not fill.
-  - ≥ 50% captured with no GTC take-profit resting → stage one. Mark ≤ $0.05 → buy back (dead collateral).
-  - Resting BTC limits below intrinsic, or far from the current mid → stale; replace.
-  - New short < 30 DTE without an OPP tag, a second opening ticket on the same name today, a put sold on a name with an underwater held lot, or name exposure > 10% NAV (held shares + short-put max loss) → flag for cancel or trim.
-  - **Anti-CAPR**: short stock and a short-put stack on the same name → flag (the calculator does this). Short stock 15% or more against entry → the 15% short stop-loss has triggered.
-- **Calendars**: treat back-month long puts as hedges. Show them next to the front short they protect: hedge ratio (long contracts ÷ short contracts), the long's delta, and whether a spot drop or IV spike has made it worth monetizing. Manage each leg on its own rules.
-
-## Step 4: Catalyst × expiry overlay (the main signal)
-
-For each leg, list every dated or windowed binary event (PDUFA, topline, AdComm, earnings, financing window, lock-up) **before its expiry**, from `references/watchlist.md` re-verified this run. The `overlay` output from Step 2 classifies each expiry as `before`, `ambiguous` (weekend/holiday action date right after it), `carries`, or `in_window` (open-ended guidance like "4Q26"). Treat `ambiguous` and `in_window` as carrying the event. `before` only means the scheduled date is later, and an early FDA action can still hit it.
-- Run `sentinel_calc.py event-move` with `pre_iv` (ATM IV of the pre-event expiry), `post_iv` and `post_expiry` + `as_of` (post-event expiry), and the leg's `strike` and `credit`. Use the ATM `straddle` only if one side is missing; it overstates the event because it includes base vol. If there's no pre-event expiry (window already open), use the straddle and say so.
-- The calculator's verdict, using the expected down level (spot × e^-move):
-  - `PAID`: strike at or below it.
-  - `THIN`: strike above it, breakeven at or below it.
-  - `UNPAID`: breakeven above it, so an average-size bad outcome is a loss.
-  Print the verdict with the implied move % and the down level.
-
-## Step 5: Cash floor refresh
-
-Rerun only when a new 10-Q/10-K, a financing, a material cash event (sale, milestone, royalty deal) or debt news landed, or when the user asks. Otherwise carry the last logged floor with its source filing and date. Q3 10-Qs land in early-to-mid November, so expect every watchlist floor to refresh then.
-- Inputs from the filing: cash + equivalents + marketable securities (exclude restricted cash); post-period inflows, including ATM/offering net proceeds whenever you add the shares; **debt principal plus exit/prepayment fees** and royalty-financing obligations; AP + accrued; lease liabilities. Exclude non-refundable deferred revenue; include refundable amounts. Burn = operating cash outflow per quarter (not net loss), without one-offs.
-- Shares: basic from the latest cover page, plus pre-funded warrants, plus shares issued since (ATM / 424B5), plus convertibles. Count options and warrants by treasury-stock method at the short strike.
-- `sentinel_calc.py floor` returns gross cash/share, net cash/share now and **at the expiry you pass** (one call per distinct expiry on the name), and runway. Compare the strike to net cash/share at expiry. A strike above it means the put is underwritten by the pipeline, not the cash. Say so.
-- If financing, debt or going-concern language changed, flag `DEEP AUDIT NEEDED` and hand off to the underwriting skill for the SOTP tiers.
-
-## Step 6: Log and deliver
-
-- Append this run's rows to the Sentinel Log (the next run's baseline).
-- **Daily report**: a Google Doc. Section order: Banner (news and IV, every ticker) → Action list (alarms ranked by $ at risk, each with a staged order: ticker, action, qty, limit, TIF) → Book ledger table → Catalyst overlay → Floors → Sources. Post the link in the Master Chat with the banner plus the action list. If there are no alarms, say `No action` in one line.
-- **Flash** (any 🔴 item, a ±8% spot move, or a ±15-pt IV shift at a held strike): chat only, ≤ 12 lines: the banner line for that ticker, what happened (link), the impact on floor/cushion/event move, and one staged order or `hold, because …`.
-- Footer: `Staged orders are proposals. Nothing was placed.` Never place, modify or cancel orders.
+## Thresholds (defaults; change them to suit)
+These are alarm levels, not trading rules:
+- defense: spot within 7% of strike, or |delta| ≥ 0.30
+- ≤ 21 DTE with a cushion of 20% or less
+- buy back at a mark of $0.05 or less
+- flag profit-taking at 50% captured
+- flash: a ±8% move or a ±15-point IV30 move
+- ignore quotes with a bid-ask spread over 30% of the mid
+- the catalyst sheet goes stale after 14 days
