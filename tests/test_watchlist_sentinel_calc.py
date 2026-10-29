@@ -87,9 +87,11 @@ def test_contract_picks_usable_put_in_band_and_computes_roc():
             q("put", 3, 1.9, -0.08, bid=0.05, ask=0.30, oi=5000)]
     out = calc.contract({"spot": 6.10, "dte": 79, "puts": puts})["contract"]
     assert out["strike"] == 4 and out["otm_pct"] == 34.4
-    assert out["breakeven"] == 3.45
-    assert out["roc_pct"] == round(0.55 / 3.45 * 100, 1)
-    assert out["annualized_pct"] == round(0.55 / 3.45 * 365 / 79 * 100, 1)
+    assert out["breakeven_mid"] == 3.45
+    assert out["roc_mid_pct"] == round(0.55 / 3.45 * 100, 1)
+    assert out["annualized_mid_pct"] == round(0.55 / 3.45 * 365 / 79 * 100, 1)
+    assert out["roc_bid_pct"] == round(0.50 / 3.50 * 100, 1)
+    assert out["annualized_bid_pct"] == round(0.50 / 3.50 * 365 / 79 * 100, 1)
 
 
 def test_contract_none_when_thin():
@@ -128,3 +130,75 @@ def test_cli_roundtrip(capsys):
                                                    "expiries": ["2026-11-20"]})]) == 0
     assert json.loads(capsys.readouterr().out)["expiries"][0]["status"] == "carries"
     assert calc.main(["x", "nope"]) == 2
+
+
+# fixes from the audit
+
+def test_overlay_past_event_is_stale_not_carried():
+    out = calc.overlay({"as_of": "2026-11-25", "event_date": "2026-11-20",
+                        "expiries": ["2026-12-18", "2027-02-19"]})
+    assert out["event_passed"] is True and "refresh" in out["warning"]
+    assert {e["status"] for e in out["expiries"]} == {"past"}
+    assert out["trading_days_to_event"] is None
+    flags = calc.assess({"front_status": "past", "back_status": "past",
+                         "trading_days_to_event": None, "term_ratio": 1.5})["flags"]
+    assert flags == ["STALE CATALYST"]
+
+
+def test_overlay_past_window():
+    out = calc.overlay({"as_of": "2027-01-05", "window_start": "2026-10-01", "window_end": "2026-12-31",
+                        "expiries": ["2027-01-15"]})
+    assert out["expiries"][0]["status"] == "past"
+
+
+def test_robinhood_strings_and_blank_iv_do_not_crash():
+    back = [{"type": "put", "strike": "5.0000", "bid": "0.50", "ask": "0.60", "iv": "", "delta": "-0.45", "oi": 100},
+            {"type": "call", "strike": "5.0000", "bid": "0.50", "ask": "0.60", "iv": "1.2", "delta": "0.55", "oi": "100"},
+            {"type": "put", "strike": "4.5000", "bid": None, "ask": "0.30", "iv": "1.4", "delta": "-0.25"}]
+    out = calc.skew({"spot": "5.02", "front": [], "back": back})
+    assert out["back_atm_iv"] is None and "chain too thin" in out["n/a"]
+    assert calc.contract({"spot": 6, "dte": 70, "puts": back})["contract"] is None
+
+
+def test_rich_puts_and_puts_not_paid_are_exclusive():
+    assert calc.assess({"put_ratio": 1.20, "call_ratio": 1.30, "shape": "call skew"})["flags"] == ["RICH PUTS"]
+    assert calc.assess({"put_ratio": 1.08, "shape": "call skew"})["flags"] == ["PUTS NOT PAID"]
+    assert calc.assess({"put_ratio": 1.10, "put_ratio_baseline": 0.98})["flags"] == ["RICH PUTS"]
+
+
+def test_price_drops_interpolated_bars():
+    real = [{"close": 10 * (1.05 if i % 2 else 0.95), "volume": 1000} for i in range(31)]
+    filler = [{"close": real[14]["close"], "volume": 0, "interpolated": True}] * 10
+    a, b = calc.price({"bars": real}), calc.price({"bars": real[:15] + filler + real[15:]})
+    assert a["hv30_from_bars"] == b["hv30_from_bars"]
+    assert a["avg_volume"] == b["avg_volume"] == 1000
+
+
+def test_price_xbi_bars_and_session_check():
+    bars = [{"begins_at": "2026-10-27T00:00:00Z", "close_price": "10", "volume": "100"},
+            {"begins_at": "2026-10-28T00:00:00Z", "close_price": "9", "volume": "300"}]
+    xbi = [{"begins_at": "2026-10-27T00:00:00Z", "close_price": "100", "volume": 1},
+           {"begins_at": "2026-10-28T00:00:00Z", "close_price": "98", "volume": 1}]
+    out = calc.price({"bars": bars, "xbi_bars": xbi, "as_of": "2026-10-28"})
+    assert out["xbi_change_pct"] == -2.0 and out["excess_vs_xbi_pts"] == -8.0
+    assert out["market_closed_or_stale"] is False
+    # run on Thanksgiving: the last session is Wednesday, so Tuesday's bar is stale
+    out = calc.price({"bars": bars, "as_of": "2026-11-26"})
+    assert out["expected_session"] == "2026-11-25" and out["market_closed_or_stale"] is True
+
+
+def test_last_session_before_close_and_weekend():
+    h = {calc._d(x) for x in calc.HOLIDAYS}
+    assert calc.last_session(calc._d("2026-11-02"), h, after_close=False).isoformat() == "2026-10-30"
+    assert calc.last_session(calc._d("2026-11-01"), h).isoformat() == "2026-10-30"
+
+
+def test_moves_regular_vs_extended_hours():
+    quotes = [{"symbol": "AAA", "last_trade_price": "9.00", "last_extended_hours_trade_price": "8.00",
+               "previous_close": "10.00"},
+              {"symbol": "BBB", "last_trade_price": "", "previous_close": "5"}]
+    reg = calc.moves({"quotes": quotes})["moves"]
+    assert reg[0]["change_pct"] == -10.0 and reg[0]["alert"] and reg[0]["news_check"]
+    assert reg[1]["change_pct"] is None
+    ext = calc.moves({"quotes": quotes, "extended_hours": True})["moves"]
+    assert ext[0]["change_pct"] == -20.0

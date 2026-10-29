@@ -18,7 +18,7 @@ No portfolio audit, no position management. The war room and book-audit skills d
 - **Links**: only URLs a tool returned this run.
 - **"No news" needs proof.** Give the newest item per source, e.g. `SEC: 8-K 10/22 · IR: PR 10/14`. If a source failed, the status is `UNVERIFIED`, not `NO NEWS`.
 - **Don't invent a reason for a move.** If nothing explains it, say `no identifiable catalyst`.
-- **All math goes through `scripts/sentinel_calc.py`**: `price`, `overlay`, `skew`, `contract`, `assess`. Don't do arithmetic, delta picking, date counts or flag logic in your head. Pass JSON as the argument or on stdin.
+- **All math goes through `scripts/sentinel_calc.py`**: `moves`, `price`, `overlay`, `skew`, `contract`, `assess`. Don't do arithmetic (including XBI's % change), delta picking, date counts, trading-day checks or flag logic in your head. Pass tool output fields as returned (Robinhood's strings and blanks are handled). Pass JSON as the argument or on stdin.
 - **Times**: ET and Da Nang. Da Nang is ET+11 during US daylight time and ET+12 otherwise.
 - **Never place, modify, cancel or preview orders.** Read Robinhood account data only if needed, and you shouldn't need it.
 - **The only writes allowed**:
@@ -52,7 +52,7 @@ BASELINE XYZ | 2026-10-29 | close 6.10 | iv30 1.48 | ivp52 0.71 | put_ratio 1.22
 
 ## Each run, for every ticker
 
-**Market open?** If the latest daily bar (step 2) isn't from the most recent US trading day, write `US market closed <date>`, run news only, and still email.
+**Market open?** `price` (step 2) returns `market_closed_or_stale`. If it's true, write `US market closed or data stale (last session <date>, expected <date>)`, run news only, and still email.
 
 ### 1. News
 **Window**: since the last daily report (from the baseline date). With no report, the last 24 hours; on a Monday, the last 72 hours.
@@ -79,7 +79,9 @@ BASELINE XYZ | 2026-10-29 | close 6.10 | iv30 1.48 | ivp52 0.71 | put_ratio 1.22
 - an insider buying or selling on the open market (Form 4; ignore 10b5-1 sales and tax withholding)
 
 ### 2. Price move and why
-- **Get the bars**: `get_equity_historicals` (symbols = ticker and XBI, `interval: day`, start ~50 days back), plus `get_equity_quotes` for after-hours. Run `price` with the last 31+ bars and XBI's % change. It returns the % change, volume vs average, HV30, the excess move vs XBI, `moved_with_biotech` and `big_move`.
+- **Get the bars**: `get_equity_historicals` (symbols = ticker and XBI, `interval: day`, start ~50 days back), plus `get_equity_quotes` for after-hours. Run `price` with `bars`, `xbi_bars`, `as_of` (today's ET date) and `after_close: true`.
+  - It drops Robinhood's interpolated filler bars.
+  - It returns the % change, XBI's % change, volume vs average, HV30, the excess move vs XBI, `moved_with_biotech`, `big_move` and `market_closed_or_stale`.
 - **Explain the move by weighing these. Don't just stop at the first one that fits**:
   - **Sector**: `moved_with_biotech` is the main reason, unless a 🔴 item landed.
   - **Company news** from step 1, timed at or just before the move.
@@ -94,15 +96,19 @@ BASELINE XYZ | 2026-10-29 | close 6.10 | iv30 1.48 | ivp52 0.71 | put_ratio 1.22
 - If nothing fits: `no identifiable catalyst`, with the volume context.
 
 ### 3. Options IV
-1. **IBKR**: `search_contracts` (the ticker's stock) → `get_price_snapshot` with `implied_vol_underlying`, `implied_volatility_percentile`, `historical_vol`. Response keys use hyphens.
-   - This gives IV30, IVP 52w/26w and HV30. If IBKR fails, use `hv30_from_bars` from `price` and write IVP as `n/a`.
+1. **IBKR**: `search_contracts` (the ticker's stock) → `get_price_snapshot` with `implied_vol_underlying`, `implied_volatility_percentile`, `historical_vol` and `top_status`. Response keys use hyphens.
+   - This gives IV30, IVP 52w/26w and HV30.
+   - If `top_status` isn't `REALTIME`, label the numbers (`DELAYED`/`FROZEN`). After the close, `FROZEN` is normal and fine.
+   - If IBKR fails, use `hv30_from_bars` from `price` and write IVP as `n/a`.
+   - IBKR's documentation calls its percentile field "implied volatility high percentile". It's the same field your large-cap skill's gate uses, so the two skills agree, but treat it as an approximation of IV percentile.
 2. **Robinhood chains**: `get_option_chains` → expirations.
    - **Front** = the nearest expiry with at least 7 days left. **Back** = the expiry closest to 75 days (60–90).
-   - For each, `get_option_instruments` (puts and calls, strikes from about 50% to 150% of spot), then `get_option_quotes` in batches of 20 or fewer.
+   - For each, `get_option_instruments` (puts and calls, strikes from about 50% to 150% of spot). **Follow `next` cursors until there are no more pages.** Then `get_option_quotes` in batches of 20 or fewer.
    - Map each quote to `{type, strike, bid, ask, iv, delta, oi, volume}`.
 3. **Run `skew`** with spot, front and back. It returns ATM IVs, the 25-delta put and call ratios vs back ATM IV, the shape and the term ratio. Unusable quotes are dropped and thin chains come back `n/a`.
-4. **Run `overlay`** with the cached catalyst, the front and back expiries, and the holidays below.
+4. **Run `overlay`** with the cached catalyst and the front and back expiries. It has the holiday calendar built in.
    - Use `event_date` for a dated event, and `window_start`/`window_end` for guidance like "Q4 2026".
+   - **If it returns `event_passed`**, the cached catalyst is stale. Look up the next one now (latest 8-K/10-Q/IR), rerun `overlay`, and report what happened at the old one if news covered it.
 5. **Run `assess`** with:
    - IVP52, IVP26, IV30, HV30
    - the put and call ratios and shape
@@ -126,10 +132,9 @@ BASELINE XYZ | 2026-10-29 | close 6.10 | iv30 1.48 | ivp52 0.71 | put_ratio 1.22
 | `UNEXPLAINED INVERSION` | The front is rich with no known catalyst. Look for an unannounced offering, leak or rumor. Treat it as a warning. |
 | `IV CRUSH WATCH` | A dated catalyst within 5 trading days. Selling now sells the binary event at peak premium; waiting means cheaper premium once the outcome is known. |
 | `CHEAP` | IVP52 < 25. No premium edge. |
+| `STALE CATALYST` | The cached catalyst date has passed and no replacement was found. Term-structure flags are skipped until it's refreshed. |
 
-**US market holidays** for `overlay` (re-check against the NYSE calendar each January):
-- **2026**: Nov 26, Dec 25.
-- **2027**: Jan 1, Jan 18, Feb 15, Mar 26, May 31, Jun 18, Jul 5, Sep 6, Nov 25, Dec 24.
+**US market holidays** are built into the calculator (`HOLIDAYS`, through 2027). Each January, check the list against the NYSE calendar and extend it.
 
 ## Daily report (chat, plus an email when scheduled)
 
@@ -142,7 +147,7 @@ BASELINE XYZ | 2026-10-29 | close 6.10 | iv30 1.48 | ivp52 0.71 | put_ratio 1.22
         $6.10 −4.2% · XBI −0.6% (excess −3.6) · vol 1.8× avg · Why: de-risking ahead of PDUFA 12/03 (medium)
         IV30 148% (+9) · IVP52 71 / IVP26 60 · IV/HV 1.6 · Put 1.22 · Call 1.05 · put skew · Term 0.84
         Catalyst after front (11/20), before back (1/15) → EVENT IN BACK · RICH PREMIUM · RICH PUTS
-        Contract: Jan 15 (78d) $4P · 0.50/0.60/0.55 · 34% OTM · OI 1,240 · Δ −0.18 · BE 3.45 · ROC 15.9% · ann. 75%
+        Contract: Jan 15 (78d) $4P · 0.50/0.60/0.55 · 34% OTM · OI 1,240 · Δ −0.18 · BE 3.45 · ROC 15.9% mid / 14.3% bid · ann. 75% / 67%
         Trap: selling this sells the PDUFA outcome.
    ```
 3. **Setups**: the flagged tickers, best first.
@@ -154,28 +159,38 @@ A quiet ticker gets its block only.
 
 ## Breaking-news watch (hourly, email only when urgent)
 
-`news watch`, or the hourly schedule:
-1. Read the watchlist.
-2. For each ticker, run **step 1 only** for the **last 90 minutes**, plus a `get_equity_quotes` check of the move vs the previous close.
-3. **Alert if** there's a 🔴 item, or a move of ±8% or more vs the previous close (then say `no identifiable catalyst yet` if there's no news).
-4. **Dedupe**: `search_threads` with `subject:"SENTINEL ALERT" newer_than:3d`, then `get_thread` for the candidates. Every alert body carries a line `ITEM: <ticker> <form or headline> <date>`. Skip any item already sent.
+`news watch`, or the hourly schedule. It's built to be cheap, because it runs 12 times a day.
+1. **Read the watchlist.**
+2. **Every run**:
+   - `get_sec_filing_index` per ticker, with `since` = yesterday (ET).
+   - **One** batched `get_equity_quotes` for all tickers, then `moves` with `extended_hours` = true outside 9:30 AM–4:00 PM ET.
+3. **Web news search**: only on runs at an even UTC hour, or for any ticker where `moves` says `news_check` (±5%) or a new filing appeared.
+   - Biotechs usually file the 8-K the same day as the press release, so SEC covers the odd hours.
+4. **Window**: the **last 3 hours**. It overlaps on purpose, so a skipped or failed run doesn't leave a gap; the dedupe step stops repeats.
+5. **Alert if** there's a 🔴 item, or `moves` says `alert` (±8%). With no news, say `no identifiable catalyst yet`.
+6. **Dedupe**: `search_threads` with `subject:"SENTINEL ALERT" newer_than:3d`, then `get_thread` for the candidates. Every alert body carries a line `ITEM: <ticker> <form or headline> <date>`. Skip any item already sent.
    - A follow-up (e.g. the 424B5 pricing after the S-3) is a new item.
-5. **Email** wilsonhersandy@gmail.com:
+   - A price-only alert counts as sent for that ticker for the rest of the session, unless the move doubles.
+7. **Email** wilsonhersandy@gmail.com:
    - **Subject**: `🔴 SENTINEL ALERT · TICKER · <what happened> · <time ET>`
    - **Body**, 10 lines or fewer, plain text:
      - what happened, with the link
      - the time in ET and Da Nang
      - the price and % vs the previous close, and the session (pre-market, regular or after-hours)
-     - front ATM IV from one `get_option_quotes` call, if it's quick, vs the baseline
      - what it changes about the catalyst or any financing overhang
      - the `ITEM:` line
      - the footer
    - Several tickers in one run go in one email.
-6. **Nothing urgent**: no email and no chat output beyond `watch: nothing new`.
+8. **Nothing urgent**: no email, and reply only `watch: nothing new`. Keep the run short; every run adds to the same conversation.
+
+**Rough cost** for 8 tickers: about 9 calls on an odd hour and 17 on an even hour, so around 150 a day for the watch, plus about 60 for the daily run.
 
 ## Schedule
 
-`set up the sentinel schedule` creates two scheduled tasks that run this skill. Following Wilson's existing routines, have them **fire into this session**, so the Robinhood, IBKR and Gmail connectors stay attached.
+`set up the sentinel schedule` creates two scheduled tasks that run this skill, if a scheduling tool is available in this session.
+- **If none is available** (plain claude.ai chat), give Wilson the table and prompts below to create the tasks himself.
+- Following his existing routines, have them **fire into the setup session**, so the Robinhood, IBKR and Gmail connectors stay attached.
+- The cost of that: about 60 watch runs a week pile into one conversation. That's why the watch is kept lean. If the conversation gets slow, start a fresh setup session and recreate the tasks there.
 
 | Task | Cron (UTC) | Da Nang | What |
 |---|---|---|---|
@@ -199,7 +214,8 @@ If the platform's minimum interval is longer than hourly, use every 2 hours.
 - `set up the sentinel schedule`
 
 ## Thresholds (in `scripts/sentinel_calc.py`; change them there)
-- **Big move**: ±8%, or 3× average volume.
+- **Big move / alert**: ±8%, or 3× average volume.
+- **News check in the watch**: ±5%.
 - **Moved with biotech**: an excess move under 3 points.
 - **Usable quote**: a bid and ask, spread ≤ 35% of mid, OI ≥ 25 or volume > 0.
 - **ATM**: put and call IV within 20 points.

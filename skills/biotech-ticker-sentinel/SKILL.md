@@ -133,6 +133,7 @@ If the target strike fails, step one strike at a time toward at-the-money, stayi
     - otherwise `flat`.
 - **Term ratio** = front ATM IV ÷ back ATM IV.
 - **Catalyst placement**: compare the `Catalyst date` with both expiries.
+  - If the date (or the end of the window) has already passed, the catalyst is stale. Find the next one, update the `Watchlist` row, and only then read term structure against it. If none is found, flag `STALE CATALYST` and skip the term flags.
   - A decision date on a weekend or holiday can land on the trading day before, so treat that expiry as carrying the event.
   - A window like "Q4" counts as inside any expiry it overlaps.
 - **Changes**: compare each number with the baseline row.
@@ -143,7 +144,7 @@ If the target strike fails, step one strike at a time toward at-the-money, stayi
 |---|---|---|
 | `RICH PREMIUM` | IV Rank ≥ 50 and vol premium ≥ 1.3 | Options are expensive versus their own history and how much the stock really moves. Your gate for selling puts is met. |
 | `RICH PUTS` | Put ratio ≥ 1.15, or up ≥ 0.10 vs baseline | Out-of-the-money puts carry extra crash premium. Favors deep out-of-the-money puts or wide bull put spreads. |
-| `PUTS NOT PAID` | Put ratio ≤ 1.00, or shape is `call skew` | The market prices upside, not a crash. Deep puts aren't paid for the gap risk. Don't sell puts for "skew" here. |
+| `PUTS NOT PAID` | Put ratio ≤ 1.00, or shape is `call skew`, and `RICH PUTS` didn't fire (the two never appear together) | The market prices upside, not a crash. Deep puts aren't paid for the gap risk. Don't sell puts for "skew" here. |
 | `EVENT IN FRONT` | Catalyst on or before the front expiry, and term ratio ≥ 1.20 | Both expiries hold the event, but the front holds it in fewer days, so its IV is concentrated. A front-month short put sells that premium outright. A short-front / long-back put calendar sells the front's bigger post-event crush, with the back month as partial protection. Risk: a gap through the strike. |
 | `EVENT IN BACK` | Catalyst after the front expiry but on or before the back | Only the back month holds the event. Its IV includes event premium; the front is clean. **Selling a back-month put means selling the event.** A short-front / long-back calendar here is *long* the event: a hedge, not a premium harvest. |
 | `UNEXPLAINED INVERSION` | Term ratio ≥ 1.20 and no catalyst before the back expiry | Someone is paying up for near-term protection. Look for an unannounced event: an offering, data leak or rumor. Treat it as a warning, not an opportunity. |
