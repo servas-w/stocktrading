@@ -86,22 +86,30 @@ def last_session(as_of: date, holidays: set[date], after_close: bool = True) -> 
 def moves(d: dict) -> dict:
     """Hourly-watch price check from one batched get_equity_quotes call.
 
-    quotes: [{symbol, last_trade_price, last_extended_hours_trade_price,
-    previous_close}] as Robinhood returns them (or a plain `last`).
-    extended_hours: true outside 9:30-16:00 ET, so the extended-hours price is
-    used; during the session it is ignored because it can be stale.
-    Flags alert (>= 8%) and news_check (>= 5%).
+    quotes: Robinhood quote objects as returned ({symbol, last_trade_price,
+    venue_last_trade_time, last_non_reg_trade_price,
+    venue_last_non_reg_trade_time, adjusted_previous_close}), or a plain
+    {symbol, last, previous_close}. Uses whichever print is more recent, so
+    pre-market and after-hours moves are caught. Flags alert (>= 8%) and
+    news_check (>= 5%).
     """
     rows = []
     for q in d["quotes"]:
-        regular, extended = _num(q.get("last_trade_price")), _num(q.get("last_extended_hours_trade_price"))
-        last = _num(q.get("last")) or ((extended or regular) if d.get("extended_hours") else regular)
-        prev = _num(q.get("previous_close")) or _num(q.get("adjusted_previous_close"))
+        q = q.get("quote", q)
+        last, session = _num(q.get("last")), "given"
+        if last is None:
+            reg, ext = _num(q.get("last_trade_price")), _num(q.get("last_non_reg_trade_price"))
+            reg_t, ext_t = q.get("venue_last_trade_time") or "", q.get("venue_last_non_reg_trade_time") or ""
+            if ext and (not reg or ext_t > reg_t):
+                last, session = ext, "extended hours"
+            else:
+                last, session = reg, "regular"
+        prev = _num(q.get("adjusted_previous_close")) or _num(q.get("previous_close"))
         if not last or not prev:
             rows.append({"symbol": q.get("symbol"), "change_pct": None, "note": "quote missing"})
             continue
         chg = (last / prev - 1) * 100
-        rows.append({"symbol": q.get("symbol"), "last": last, "prev_close": prev,
+        rows.append({"symbol": q.get("symbol"), "last": last, "prev_close": prev, "session": session,
                      "change_pct": round(chg, 2), "alert": abs(chg) >= BIG_MOVE_PCT,
                      "news_check": abs(chg) >= NEWS_CHECK_MOVE_PCT})
     return {"moves": rows}
@@ -292,6 +300,9 @@ def contract(d: dict) -> dict:
     """The put to look at: usable, 25-35% OTM, most open interest.
 
     spot, dte, puts (contracts of one expiry). Optional otm_min/otm_max.
+    Small biotechs often list $1 or $0.50 strikes only, so when nothing sits
+    in the band, the usable put closest to the band's middle within 15-50%
+    OTM is used instead and flagged `outside_target_band`.
     ROC = credit / (strike - credit) on cash-secured capital, shown at the
     mid and at the bid (thin biotech chains often fill near the bid).
     """
@@ -302,8 +313,14 @@ def contract(d: dict) -> dict:
         otm = (spot - c["strike"]) / spot
         if c["type"] in ("put", "") and lo <= otm <= hi:
             cands.append((c["oi"], otm, c))
+    fallback = False
     if not cands:
-        return {"contract": None, "note": f"no usable put {lo:.0%}-{hi:.0%} OTM (chain too thin)"}
+        mid_band = (lo + hi) / 2
+        wide = [(c["oi"], (spot - c["strike"]) / spot, c) for c in _usable_list(d["puts"])
+                if c["type"] in ("put", "") and 0.15 <= (spot - c["strike"]) / spot <= 0.50]
+        if not wide:
+            return {"contract": None, "note": "no usable put 15%-50% OTM (chain too thin, or quotes stale outside market hours)"}
+        cands, fallback = [min(wide, key=lambda x: abs(x[1] - mid_band))], True
     _, otm, c = max(cands, key=lambda x: (x[0], -abs(x[1] - (lo + hi) / 2)))
     k, bid, ask = c["strike"], c["bid"], c["ask"]
     mid = (bid + ask) / 2
@@ -314,6 +331,7 @@ def contract(d: dict) -> dict:
         "breakeven_mid": round(k - mid, 3),
         "roc_mid_pct": round(roc_mid * 100, 1), "annualized_mid_pct": round(roc_mid * 365 / dte * 100, 1),
         "roc_bid_pct": round(roc_bid * 100, 1), "annualized_bid_pct": round(roc_bid * 365 / dte * 100, 1),
+        "outside_target_band": fallback,
     }}
 
 

@@ -79,7 +79,8 @@ BASELINE XYZ | 2026-10-29 | close 6.10 | iv30 1.48 | ivp52 0.71 | put_ratio 1.22
 - an insider buying or selling on the open market (Form 4; ignore 10b5-1 sales and tax withholding)
 
 ### 2. Price move and why
-- **Get the bars**: `get_equity_historicals` (symbols = ticker and XBI, `interval: day`, start ~50 days back), plus `get_equity_quotes` for after-hours. Run `price` with `bars`, `xbi_bars`, `as_of` (today's ET date) and `after_close: true`.
+- **Get the bars**: `get_equity_historicals` (symbols = ticker and XBI, `interval: day`, start ~50 days back), plus `get_equity_quotes` for after-hours. Run `price` with `bars`, `xbi_bars`, `as_of` (today's ET date) and `after_close: true`. That counts today's bar as the session, so at 3:45 PM ET, today's partial bar is the one reported.
+  - Label the move `as of 3:45 PM ET`, since it isn't the final close.
   - It drops Robinhood's interpolated filler bars.
   - It returns the % change, XBI's % change, volume vs average, HV30, the excess move vs XBI, `moved_with_biotech`, `big_move` and `market_closed_or_stale`.
 - **Explain the move by weighing these. Don't just stop at the first one that fits**:
@@ -97,14 +98,26 @@ BASELINE XYZ | 2026-10-29 | close 6.10 | iv30 1.48 | ivp52 0.71 | put_ratio 1.22
 
 ### 3. Options IV
 1. **IBKR**: `search_contracts` (the ticker's stock) → `get_price_snapshot` with `implied_vol_underlying`, `implied_volatility_percentile`, `historical_vol` and `top_status`. Response keys use hyphens.
-   - This gives IV30, IVP 52w/26w and HV30.
+   - Field map, checked against a live response:
+     - `iv30` = `implied-vol-underlying.annual_iv`
+     - `ivp52` / `ivp26` = `implied-volatility-percentile.high_52w` / `high_26w`
+     - `hv30` = `historical-vol.annual_pct`
+     
+     All are fractions.
    - If `top_status` isn't `REALTIME`, label the numbers (`DELAYED`/`FROZEN`). After the close, `FROZEN` is normal and fine.
    - If IBKR fails, use `hv30_from_bars` from `price` and write IVP as `n/a`.
    - IBKR's documentation calls its percentile field "implied volatility high percentile". It's the same field your large-cap skill's gate uses, so the two skills agree, but treat it as an approximation of IV percentile.
 2. **Robinhood chains**: `get_option_chains` → expirations.
    - **Front** = the nearest expiry with at least 7 days left. **Back** = the expiry closest to 75 days (60–90).
    - For each, `get_option_instruments` (puts and calls, strikes from about 50% to 150% of spot). **Follow `next` cursors until there are no more pages.** Then `get_option_quotes` in batches of 20 or fewer.
-   - Map each quote to `{type, strike, bid, ask, iv, delta, oi, volume}`.
+   - Map each quote to `{type, strike, bid, ask, iv, delta, oi, volume}`:
+     - from the instrument: `type`, and `strike_price` → `strike`
+     - from the quote: `bid_price` → `bid`, `ask_price` → `ask`, `implied_volatility` → `iv`, `delta`, `open_interest` → `oi`, `volume`
+     
+     Pass the strings as they are.
+   - **Robinhood option quotes are only real during the regular session (9:30 AM–4:00 PM ET).** Outside it, bids read 0 and IVs are junk. The calculator rejects those quotes, so skew comes back `n/a`.
+     - Run step 3 during market hours (the scheduled daily run is at 3:45 PM ET for this reason).
+     - Outside the session, write `options: market closed, skew n/a` and skip `contract`.
 3. **Run `skew`** with spot, front and back. It returns ATM IVs, the 25-delta put and call ratios vs back ATM IV, the shape and the term ratio. Unusable quotes are dropped and thin chains come back `n/a`.
 4. **Run `overlay`** with the cached catalyst and the front and back expiries. It has the holiday calendar built in.
    - Use `event_date` for a dated event, and `window_start`/`window_end` for guidance like "Q4 2026".
@@ -118,7 +131,7 @@ BASELINE XYZ | 2026-10-29 | close 6.10 | iv30 1.48 | ivp52 0.71 | put_ratio 1.22
    - `trading_days_to_event`, and `event_dated` (overlay's `dated` field)
    
    Then report the flags it returns.
-6. **If `needs_contract`**: run `contract` with spot, DTE and the puts of the flag's expiry (front for `EVENT IN FRONT`, back otherwise). Report its line, then one line on the trap: a catalyst inside the expiry, a recent financing, or a thin chain.
+6. **If `needs_contract`**: run `contract` with spot, DTE and the puts of the flag's expiry (front for `EVENT IN FRONT`, back otherwise). If the chain has no strike 25–35% out of the money (common with $1 strikes on small caps), `contract` uses the nearest usable one and sets `outside_target_band`; say so. Report its line, then one line on the trap: a catalyst inside the expiry, a recent financing, or a thin chain.
 
 **What the flags mean for a put seller**:
 
@@ -163,7 +176,7 @@ A quiet ticker gets its block only.
 1. **Read the watchlist.**
 2. **Every run**:
    - `get_sec_filing_index` per ticker, with `since` = yesterday (ET).
-   - **One** batched `get_equity_quotes` for all tickers, then `moves` with `extended_hours` = true outside 9:30 AM–4:00 PM ET.
+   - **One** batched `get_equity_quotes` for all tickers, then `moves` with the quote objects as returned. It picks the more recent of the regular and extended-hours prints, so pre-market moves are caught.
 3. **Web news search**: only on runs at an even UTC hour, or for any ticker where `moves` says `news_check` (±5%) or a new filing appeared.
    - Biotechs usually file the 8-K the same day as the press release, so SEC covers the odd hours.
 4. **Window**: the **last 3 hours**. It overlaps on purpose, so a skipped or failed run doesn't leave a gap; the dedupe step stops repeats.
@@ -194,7 +207,7 @@ A quiet ticker gets its block only.
 
 | Task | Cron (UTC) | Da Nang | What |
 |---|---|---|---|
-| Sentinel daily | `31 21 * * 1-5` | 4:31 AM Tue–Sat | Full run, emails the daily report. That's after the US close in both seasons (4:31 PM ET in winter, 5:31 PM ET in summer). |
+| Sentinel daily | `CRON_TZ=America/New_York 45 15 * * 1-5` | 2:45 AM (US summer) / 3:45 AM (winter), Tue–Sat | Full run, emails the daily report. It runs 15 minutes before the close, because option quotes are only real during the session (the move is labeled as of 3:45 PM ET, not the final close). |
 | Sentinel news watch | `7 12-23 * * 1-5` | hourly 7 PM–6 AM | Breaking-news watch (US pre-market to after-hours) |
 
 **Prompts**:

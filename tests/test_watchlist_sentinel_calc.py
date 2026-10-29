@@ -193,12 +193,31 @@ def test_last_session_before_close_and_weekend():
     assert calc.last_session(calc._d("2026-11-01"), h).isoformat() == "2026-10-30"
 
 
-def test_moves_regular_vs_extended_hours():
-    quotes = [{"symbol": "AAA", "last_trade_price": "9.00", "last_extended_hours_trade_price": "8.00",
-               "previous_close": "10.00"},
+def test_moves_uses_latest_print_with_real_robinhood_fields():
+    # shapes copied from a live get_equity_quotes response
+    quotes = [{"quote": {"symbol": "ACRS", "last_trade_price": "3.970000",
+                         "venue_last_trade_time": "2026-10-28T19:59:59.899Z",
+                         "last_non_reg_trade_price": "3.561600",
+                         "venue_last_non_reg_trade_time": "2026-10-29T11:46:52.338Z",
+                         "adjusted_previous_close": "3.960000"}},
+              {"quote": {"symbol": "MGNX", "last_trade_price": "2.480000",
+                         "venue_last_trade_time": "2026-10-29T15:00:00.000Z",
+                         "last_non_reg_trade_price": "2.440000",
+                         "venue_last_non_reg_trade_time": "2026-10-29T01:16:27.696Z",
+                         "adjusted_previous_close": "2.470000"}},
               {"symbol": "BBB", "last_trade_price": "", "previous_close": "5"}]
-    reg = calc.moves({"quotes": quotes})["moves"]
-    assert reg[0]["change_pct"] == -10.0 and reg[0]["alert"] and reg[0]["news_check"]
-    assert reg[1]["change_pct"] is None
-    ext = calc.moves({"quotes": quotes, "extended_hours": True})["moves"]
-    assert ext[0]["change_pct"] == -20.0
+    rows = calc.moves({"quotes": quotes})["moves"]
+    assert rows[0]["session"] == "extended hours" and rows[0]["change_pct"] == -10.06 and rows[0]["alert"]
+    assert rows[1]["session"] == "regular" and rows[1]["change_pct"] == 0.4
+    assert rows[2]["change_pct"] is None
+
+
+def test_contract_falls_back_on_sparse_strikes_and_rejects_overnight_quotes():
+    # ACRS-like chain: $1 strikes around a $3.96 spot, nothing 25-35% OTM
+    puts = [q("put", 3, 1.3, -0.22, bid=0.30, ask=0.40, oi=58),
+            q("put", 2, 1.6, -0.06, bid=0.05, ask=0.10, oi=40)]
+    out = calc.contract({"spot": 3.96, "dte": 78, "puts": puts})["contract"]
+    assert out["strike"] == 3 and out["outside_target_band"] is True
+    # overnight Robinhood quotes: bid 0, junk IV -> nothing usable
+    night = [q("put", 3, 0.36, -0.04, bid=0.0, ask=0.75, oi=58)]
+    assert calc.contract({"spot": 3.96, "dte": 78, "puts": night})["contract"] is None
