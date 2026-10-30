@@ -22,11 +22,31 @@ GT = 0.025  # terminal growth
 
 
 # ---------- helpers ----------
+WARN = []  # input problems found this run; printed before the verdict
+_SCALE = {"K": 1e-3, "M": 1.0, "B": 1e3, "T": 1e6}  # suffixes scale to MILLIONS (money and shares)
+_MONTHS = {m: i for i, m in enumerate(
+    ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1)}
+
+
 def f(v):
-    try:
-        return None if v is None or v == "" else float(v)
-    except (TypeError, ValueError):
+    """Number as web pages print it: 10,031 · (85) · $268.54 · 389.20M · 1.2B · -3.18% · −0.5 · n/a."""
+    if v is None or isinstance(v, bool):
         return None
+    if isinstance(v, (int, float)):
+        return float(v)
+    t = str(v).strip().replace(",", "").replace("$", "").replace("%", "").replace("\u2212", "-").replace(" ", "")
+    if t in ("", "-", "--", "n/a", "N/A", "NA", "None", "null"):
+        return None
+    neg = t.startswith("(") and t.endswith(")")
+    t = t.strip("()")
+    scale = 1.0
+    if t and t[-1].upper() in _SCALE:
+        scale, t = _SCALE[t[-1].upper()], t[:-1]
+    try:
+        x = float(t) * scale
+    except ValueError:
+        return None
+    return -x if neg else x
 
 
 def rate(v):
@@ -35,12 +55,29 @@ def rate(v):
 
 
 def d(s):
+    """Date as pages print it: 2026-08-31 · 2026-08 · Aug 31, 2026 · August 31 2026 · 8/31/2026 · Aug 2026."""
     if not s:
         return None
-    try:
-        return datetime.strptime(str(s)[:10], "%Y-%m-%d").date()
-    except ValueError:
-        return None
+    if isinstance(s, date):
+        return s
+    t = str(s).strip()
+    for fmt, n in (("%Y-%m-%d", 10), ("%m/%d/%Y", None), ("%Y-%m", 7)):
+        try:
+            return datetime.strptime(t if n is None else t[:n], fmt).date()
+        except ValueError:
+            pass
+    parts = t.replace(",", " ").split()
+    if parts and parts[0][:3].lower() in _MONTHS:
+        mo = _MONTHS[parts[0][:3].lower()]
+        nums = [int(p_) for p_ in parts[1:] if p_.isdigit()]
+        yr = next((n for n in nums if n > 31), None)
+        day = next((n for n in nums if n <= 31), 1)
+        if yr:
+            try:
+                return date(yr, mo, day)
+            except ValueError:
+                return None
+    return None
 
 
 def m(x, dp=2):
@@ -97,18 +134,26 @@ def fiscal_q(end, fy_end):
 
 def cf_series(rows, fy_end, mode):
     """rows: [{end, ocf, capex}] any order. Returns (ttm_ocf, ttm_capex, quarters newest-first, note)."""
-    recs = []
+    recs, bad = [], 0
     for r in rows or []:
-        e = d(r.get("end"))
-        if e:
-            recs.append({"end": e, "ocf": f(r.get("ocf")), "capex": abs(f(r.get("capex")) or 0.0)})
+        e, o = d(r.get("end")), f(r.get("ocf"))
+        if e is None or o is None:
+            WARN.append(f"cash-flow row unreadable: {r}")
+            bad += 1
+            continue
+        recs.append({"end": e, "ocf": o, "capex": abs(f(r.get("capex")) or 0.0)})
+    if bad:  # never build TTM around a hole: a dropped newest quarter would silently shift the window
+        return None, None, [], f"{bad} unreadable cash-flow row(s): fix and rerun"
     recs.sort(key=lambda r: r["end"], reverse=True)
     if not recs:
         return None, None, [], "no cash-flow rows"
     if mode == "discrete":
         qs = recs[:4]
-        if len(qs) < 4 or any(r["ocf"] is None for r in qs):
-            return None, None, qs, "fewer than 4 discrete quarters"
+        if len(qs) < 4:
+            return None, None, qs, "fewer than 4 readable discrete quarters"
+        gaps = [abs(months(b["end"], a["end"]) - 3) > 1 for a, b in zip(qs, qs[1:])]
+        if any(gaps):
+            return None, None, qs, "the 4 newest readable quarters aren't consecutive (a row is missing or unreadable)"
         return sum(r["ocf"] for r in qs), sum(r["capex"] for r in qs), qs, "discrete quarters summed"
     if not fy_end:
         return None, None, [], "cf_mode ytd needs fy_end"
@@ -172,7 +217,24 @@ def implied_g(fcf0, ev, r):
 
 
 # ---------- main ----------
+def _to_millions(x):
+    """statement_units 'thousands' (Yahoo financials) -> $ millions for every statement money field."""
+    if str(x.get("statement_units", "millions")).lower() != "thousands":
+        return x
+    k = lambda v: None if f(v) is None else f(v) / 1000.0  # noqa: E731
+    x = dict(x)
+    for key in ("cash", "debt", "sbc_ttm"):
+        if key in x:
+            x[key] = k(x[key])
+    for key, fields in (("cf_q", ("ocf", "capex")), ("annual", ("ocf", "capex", "ni")),
+                        ("is_q", ("rev", "op_inc", "ni"))):
+        x[key] = [{**r, **{fl: k(r[fl]) for fl in fields if fl in r}} for r in x.get(key) or []]
+    return x
+
+
 def valu(x):
+    del WARN[:]
+    x = _to_millions(x)
     T_ = x.get("ticker", "?")
     asof = d(x.get("asof")) or date.today()
     S = f(x.get("spot"))
@@ -197,7 +259,10 @@ def valu(x):
     beats = sum(1 for s in sur if f(s["act"]) >= f(s["est"]))
     avg_sur = (sum((f(s["act"]) - f(s["est"])) / abs(f(s["est"])) for s in sur if f(s["est"])) / len(sur)) if sur else None
     sales_q = [f(v) for v in (x.get("sales_q") or [])]
-    revs = [f(r.get("rev")) for r in sorted((r for r in (x.get("is_q") or []) if d(r.get("end"))), key=lambda r: d(r["end"]))]
+    for r in x.get("is_q") or []:
+        if d(r.get("end")) is None or f(r.get("rev")) is None:
+            WARN.append(f"income-statement row unreadable, not used: {r}")
+    revs = [f(r.get("rev")) for r in sorted((r for r in (x.get("is_q") or []) if d(r.get("end")) and f(r.get("rev")) is not None), key=lambda r: d(r["end"]))]
     if len(revs) > len(sales_q) and None not in revs:
         sales_q = revs  # discrete income-statement quarters win over a shorter sales_q list
     eps_q = [f(v) for v in (x.get("eps_adj_q") or [])]
@@ -330,8 +395,13 @@ def valu(x):
 
     # own history: P/FCF at each fiscal year's low (current share count: buybacks make past multiples look lower -> conservative)
     pm = x.get("px_m") or {}
-    bars = [(d(str(t)[:7] + "-01"), f(lo)) for t, lo in zip(pm.get("t") or [], pm.get("l") or [])]
-    bars = [(t, lo) for t, lo in bars if t and lo is not None]
+    bars = []
+    for t, lo in zip(pm.get("t") or [], pm.get("l") or []):
+        dt, lv = d(t), f(lo)
+        if dt is None or lv is None:
+            WARN.append(f"monthly bar unreadable, not used: {t} {lo}")
+            continue
+        bars.append((dt.replace(day=1), lv))
     hist = []
     for a in x.get("annual") or []:
         e = d(a.get("end"))
@@ -355,14 +425,17 @@ def valu(x):
           f"trough x owner FCF = {m(v_trough)}/sh | median x FCF = {m(v_hmed)}/sh")
 
     # peers
-    pe_med = median([f(q.get("pe_f1")) for q in peers if (f(q.get("pe_f1")) or 0) > 0])
+    # Finviz Forward P/E is on NEXT fiscal year EPS -> pe_f2, matched with eps_f2; Zacks-style pe_f1 -> eps_f1
+    pe_key = "pe_f2" if any(f(q.get("pe_f2")) for q in peers) else "pe_f1"
+    eps_pe = eps_f2 if pe_key == "pe_f2" else eps_f1
+    pe_med = median([f(q.get(pe_key)) for q in peers if (f(q.get(pe_key)) or 0) > 0])
     ps_med = median([f(q.get("ps")) for q in peers if (f(q.get("ps")) or 0) > 0])
     peg_med = median([f(q.get("peg")) for q in peers if (f(q.get("peg")) or 0) > 0])
-    v_pe = pe_med * eps_f1 if (pe_med and eps_f1 and eps_f1 > 0) else None
+    v_pe = pe_med * eps_pe if (pe_med and eps_pe and eps_pe > 0) else None
     v_ps = ps_med * sales_ttm / shares if (ps_med and sales_ttm and shares) else None
-    t_pe = S / eps_f1 if (S and eps_f1 and eps_f1 > 0) else None
+    t_pe = S / eps_pe if (S and eps_pe and eps_pe > 0) else None
     t_ps = mcap / sales_ttm if (mcap and sales_ttm) else None
-    print(f"Peers ({', '.join(str(q.get('t')) for q in peers) or 'none'}): fwd P/E med {m(pe_med, 1)}x vs {m(t_pe, 1)}x "
+    print(f"Peers ({', '.join(str(q.get('t')) for q in peers) or 'none'}): fwd P/E ({'next FY' if pe_key == 'pe_f2' else 'current FY'}) med {m(pe_med, 1)}x vs {m(t_pe, 1)}x "
           f"({p((t_pe / pe_med - 1) if (t_pe and pe_med) else None, 0)}) | P/S med {m(ps_med, 1)}x vs {m(t_ps, 1)}x | "
           f"PEG med {m(peg_med)} vs {m(f(x.get('peg')))} | implied/sh: fwd P/E {m(v_pe)} | P/S {m(v_ps)}")
     if not peers:
@@ -380,6 +453,8 @@ def valu(x):
     mos = (fair / S - 1) if (fair and S) else None
     if fair is None or S is None:
         v = "INCOMPLETE: fair value needs owner FCF, peers or estimates"
+    elif owner is None and not fin:
+        v = "INCOMPLETE: owner FCF inputs missing or unreadable - fix them; this is not a SPECULATIVE call"
     elif not dcf_ok and not fin:
         v = "SPECULATIVE: no owner cash flow - value rests on peer multiples only"
     elif floor is not None and abs(S / floor - 1) <= 0.02:
@@ -396,11 +471,14 @@ def valu(x):
           f"earnings {trend}, quality {quality}, move {cls}")
     if unver:
         print("UNVERIFIED: " + ", ".join(unver))
+    if WARN:
+        print("INPUT WARNINGS: " + " | ".join(WARN))
     print("VERDICT: " + v)
     hand = {"ticker": T_, "asof": str(asof), "val_floor": None if floor is None else round(floor, 2),
             "val_fair": None if fair is None else round(fair, 2), "val_implied_g": None if ig is None else round(ig, 4),
             "val_r": round(r, 4), "val_trough_pfcf": None if trough is None else round(trough, 1),
-            "val_move": cls, "val_trend": trend, "val_verdict": v.split(":")[0]}
+            "val_move": cls, "val_trend": trend, "val_verdict": v.split(":")[0],
+            "input_warnings": len(WARN)}
     print("VALU_HANDOFF " + json.dumps(hand))
 
 
