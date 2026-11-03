@@ -25,7 +25,7 @@ Header + Metadata (`Ref: AH-<date>`) · Bottom Line · Scorecard (Tape + Executi
 6. **AMC earnings deconstruction & sympathy matrix:** `[Guidance ≠ Realized Cash Flow]`; conference-call disclosures (capex, margins, backlog); breadth check `[Aggregate ≠ Breadth]`. Held names and names with open puts first.
 7. **Portfolio closing ledger & P&L attribution:** Book feed line · Trigger scan line · feed verbatim · session fills (net credit/debit) · **missed harvest** (every HARVEST row still open at the close, $ total) · Tripwire top 5 (after-hours) · themes ≥ 5% NAV · held-lot status table (triggered or ±5% rows only) · held movers ≥ ±5% after hours (or the None line) · Greeks (or STALE) · Book Triggers · held-lot unrealized beside realized P&L
 8. **Post-close SEC filings (16:00–18:30 ET):** 8-K, S-3 dilution, Form 4 `[Plan ≠ Realized Execution]`; if none: `None filed during this window.`
-9. **Mag 7 closing matrix & post-market microstructure:** close, extended-hours mark, volume vs average, IV status
+9. **Mag 7 closing matrix & post-market microstructure:** all seven names with close, day change and extended-hours mark (no N/A close without a reason), volume vs average, IV status
 10. **Screener & hunt list:** put candidates (top 3 or the No-tickers line) · next-session hunt list (GREEN) · Short Bench (held shorts first; next-session trigger and stop) · Scenario Map (next session) · Indicators & Warning Signs · Decision Gates
 11. **Trade Journal logging summary:** rows added or closed, rules broken (by number and name), and today's rule-adherence %
 12. **Works Cited** (Source Notes with provenance lines) + Integrity line
@@ -34,6 +34,7 @@ War Room Handoff (core-rules §9, including PUBLISHED CLOSES; HELD MOVERS = afte
 ## Mode rules
 - PUBLISHED CLOSES use the official 16:00 ET close. For held names, use the book or quote source's close; if a search source differs by more than 0.5%, note it.
 - New shorts under 30 DTE are allowed (tag them OPP); don't log them as breaches.
+- The day's top AMC event (the one named in the Bottom Line) gets its close, after-hours reaction and guidance in Section 6. If any of them can't be sourced, say why.
 
 ## Common mistakes
 - Treating an extended-hours print as the close.

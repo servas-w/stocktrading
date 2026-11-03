@@ -16,13 +16,13 @@ The Nov 2 pre-market also built its triggers from a highlight list instead of th
 | 3 | Concentration | R5 % NAV uses the official gross test (puts + shares, long puts not netted); the net-of-hedge column is labelled as information only | Recompute with `core-rules.md` §3 |
 | 4 | Published closes | Every "prior close" matches the latest AH/WKND `PUBLISHED CLOSES:` | Restore it; add `(source now shows X)` |
 | 5 | Continuity | Every unexplained move is tagged `UNVERIFIED`. Benchmarks are left out of Key levels; held names stay in with `check broker before acting`. | Tag it and move it |
-| 6 | Consistency | A ticker has the same price, strike and quantity in every section | Fix it to the Section 7 value |
+| 6 | Consistency | List every number in the Bottom Line and Key Judgments next to the section value it came from (bands, % NAV, counts, closes); each pair must match. A ticker has the same price, strike and quantity in every section. No claim about earlier reports without evidence. | Fix it to the section value; drop the claim |
 | 7 | Provenance | Every Bottom Line and Key Judgment number has a Source Notes line with a link and the page time | Add the line, or remove the number |
 | 8 | ✓✓ honesty | ✓✓ only where two independent pages agree within tolerance | Downgrade to ✓ or N/A |
 | 9 | Calendar | Every event date has an acceptable source (`core-rules.md` §5) | `date unconfirmed — check before expiry` |
 | 10 | Staleness | Gamma, Greeks, stress and IVR are refreshed this run or tagged `STALE (as of …)` | Add the tag |
 | 11 | Arithmetic | Bands show their inputs. Spot-check 3 cushions, 3 % NAV rows and the ROC figures with code execution | Recompute |
-| 12 | Handoff and length | The Handoff has FEED / ACTIONS / TRIGGERS (and PUBLISHED CLOSES in AH/WKND); the report is within the word cap | Complete the Handoff; trim |
+| 12 | Handoff, REPEAT and format | The Handoff is in a code block with one item per line and has FEED / ACTIONS / TRIGGERS (and PUBLISHED CLOSES in AH/WKND). `REPEAT` appears only on count ≥ 3, repeats lead the Bottom Line, and `Repeat triggers: n` equals the count of open count-≥-3 lines in the Handoff. No markdown inside table cells. The header shows the runner. Within the word cap. | Fix the label, order or count; complete the Handoff; trim |
 
 Print it compactly at the end of the Works Cited, naming the item for anything that isn't a clean ✓. For example:
 `Integrity: 1✓ 2✓(53/53) 3✓ 4✓ 5△(MGNX unverified) 6✓ 7✓ 8✓ 9△(APP date unconfirmed) 10△(GEX STALE) 11✓ 12✓`

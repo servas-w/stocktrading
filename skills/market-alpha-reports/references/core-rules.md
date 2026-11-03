@@ -31,7 +31,9 @@ Worked examples (book of late Oct 2026, NAV ≈ $343K):
 
 ## 4. Repeat triggers
 - Each Handoff carries `TRIGGERS:` (see §9). When a trigger is still open, copy it forward and add 1 to its count. When it's cleared, mark it `cleared` once, then drop it.
-- A count ≥ 3 makes it a repeat: it goes first in the Bottom Line as `REPEAT (n reports / since <date>)`, ahead of new items.
+- A count ≥ 3 makes it a repeat. **Only** a trigger with count ≥ 3 may carry the `REPEAT` label; a count of 1–2 is never labelled REPEAT.
+- **Bottom Line order:** the `Action:` list starts with REPEAT triggers (highest count first, then by risk removed), then the rest by risk removed. If there are more than 5 repeats, the 5 with the highest risk come first and the others stay in the full order table.
+- `Repeat triggers: n` in the Scorecard = the number of `TRIGGERS:` lines in **this** report's Handoff with count ≥ 3 and status open. Count them from the Handoff you actually wrote.
 
 ## 5. Number discipline
 - **Source-or-N/A:** every market number needs a source page and the time shown on that page. If none is found, print `N/A`. Never fill a gap with a plausible, "implied" or derived value (for example "SPX ~7,618 implied").
@@ -43,7 +45,9 @@ Worked examples (book of late Oct 2026, NAV ≈ $343K):
 - **✓✓** only when two independent pages agree: stock ±0.5%, index/ETF ±0.1%, yield ±2 bp, FX ±0.1%, commodity ±0.5%, BTC ±0.5%, VIX ±0.2 pt. Two pages fed by the same syndicated feed count as one. Otherwise use `✓`.
 - **Links:** each link opens the page that shows the number. Never link a generic quote page for a pre-market or after-hours mark it doesn't display, and never link an article about something else.
 - **Calendar dates** (earnings, PDUFA, data releases): accept company investor relations, the exchange or SEC, or an official calendar of any age, or news ≤ 30 days old. If sources conflict, print `date unconfirmed — check before expiry`.
-- **One value per item:** a ticker has the same price, strike and quantity in every section. Section 7 is the reference.
+- **One value per item:** a ticker has the same price, strike and quantity in every section. Section 7 is the reference. Every number in the Bottom Line and Key Judgments (bands, % NAV, counts, closes) must equal the number in the section where it is calculated. Write the section first, then copy the value into the Bottom Line; never recompute it there.
+- **Claims about earlier reports** ("first time", "no prior report caught it", "new") are allowed only if the TRIGGERS history in the previous Handoff, or a report you actually opened this run, shows it. Otherwise leave the claim out.
+- **Top event coverage:** if the day's top event is an earnings release or a single stock, that stock's close, extended-hours mark and guidance must be pulled, or printed N/A with the reason. Every Mag 7 row needs a close and a day change.
 
 ## 6. Formulas (show inputs; use code execution where available)
 - **Bands:**
@@ -83,6 +87,8 @@ Worked examples (book of late Oct 2026, NAV ≈ $343K):
 - **Unchanged section:** one line, `No change since <Ref> — <key number>`.
 - **Tables:** 10 rows at most. **Exempt:** the 11-sector leaderboard, the Cross-Asset Dashboard, the WKND Tripwire Map, staged order tables and Book Triggers. Held-name tables otherwise show only rows that are triggered or have moved ±5%, plus a one-line summary of the rest.
 - **Formatting:** no backticks around numbers, tickers or times. Bold only labels and the Bottom Line. Link a ticker on its first mention only. No decorative emoji. State each number once and refer back with `(see §7)`.
+- **Tables:** no `**`, `*`, backticks or links inside table cells. Google Docs bolds the header row by itself, so markdown inside cells shows as literal symbols. Put emphasis in the text around the table instead.
+- **Line-by-line blocks** (the War Room Handoff, any verbatim feed text): put them inside a fenced code block (three backticks plus `text`). Single line breaks collapse into one paragraph outside a code block (tested 3 Nov 2026).
 
 ## 9. War Room Handoff (closes every report; the next report reads it)
 ```
@@ -93,13 +99,26 @@ TRIGGERS: TICKER contract · rule · first flagged <date> · count n · open|cle
 PUBLISHED CLOSES (<session date>): SPX … · NDX … · DJI … · RUT … · 10Y … · DXY … · Brent … · WTI … · Gold … · BTC … · VIX … | held: TICKER $x · …   (AH and WKND only)
 HELD MOVERS (≥ 5%): … or None
 ```
-Plain text, one item per line.
+Write it inside a fenced code block (` ```text ` … ` ``` `), one item per line, so the line breaks survive the conversion to a Google Doc. Each ACTIONS item and each TRIGGERS item gets its own line.
 
 ## 10. Source Notes and Integrity
 - **Provenance:** Works Cited must list every number used in the Bottom Line and Key Judgments as `value · what it is · source link · time shown on page`. Anything without a line here can't appear in those two sections.
 - Then print the Integrity line from `integrity.md`.
 
 ## 11. Save
+**One runner per mode.** Each mode has exactly one runner. Change this table if Wilson changes the split:
+
+| Mode | Runner | Why |
+|---|---|---|
+| PRE | Claude | sets the day's orders; needs the live book and pre-market quotes |
+| MID | Gemini | refresh of an existing plan; reads the MID WarRoom PDF |
+| AH | Claude | publishes the closes every later report reuses |
+| WKND | Claude | stress test, journal and repeat-trigger history |
+
+- The second header line of every report includes `Runner: Claude` or `Runner: Gemini`.
+- If you are asked to run a mode that belongs to the other runner, run it only if the user explicitly asked in this conversation. A scheduled run of the wrong runner stops and replies `<mode> belongs to <runner>; not written`.
+- Never replace or trash a doc whose header shows the other runner. If one already exists for the same mode and day, stop and reply with its link.
+
 1. Search `Market Reports` for the exact doc title. If it exists, update it in place and set the header to `Updated HH:MM ET / HH:MM ICT (vN)`. Never create a second doc with a time suffix.
 2. Write with native Docs headings, bold and tables.
 3. Read back the first 1,000 characters. If you see literal `#`, `**`, backslashes or backticks, or the doc is under 2 KB, the save failed.

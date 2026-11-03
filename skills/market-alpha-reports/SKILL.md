@@ -18,6 +18,7 @@ Four reports, one skill. Each mode has its own job and template. The rules share
 **Read before writing:** the mode file, `references/core-rules.md`, `references/playbook.md` and `references/integrity.md`. If `apply-market-report-standards`, `render-book-desks` or `build-short-bench` are installed, use them for desk layouts; where they conflict with these files, these files win.
 
 ## Ground rules (Claude)
+- **Runner:** Claude runs PRE, AH and WKND; Gemini runs MID (core-rules §11). Write `Runner: Claude` in the header. If a scheduled run asks for MID, stop and say so; run it only if Wilson asks in this chat.
 - **Read-only on the broker.** Never place, modify or cancel an order. Orders appear in the report as staged tickets only.
 - **Account:** ••6081 (account_number `5QR66081`). Mask it in the doc. Show ••1686 only if the live pull returns positions for it.
 - **Tools:** load connector tools by searching for the bare tool name (server prefixes vary by install). Never type a full prefixed name from memory.
@@ -27,15 +28,20 @@ Four reports, one skill. Each mode has its own job and template. The rules share
 ## Platform mapping (Claude)
 | Need | Source |
 |---|---|
-| **Book source** | A live Robinhood pull: `get_portfolio`, `get_equity_positions`, `get_option_positions` (all pages, nonzero only), working orders (`get_option_orders` / `get_equity_orders`, state confirmed) and the session's fills (state filled, plus `get_pnl_trade_history` for GTCs created on earlier days). The newest WarRoom PDF for this mode in the Drive folder `Robinhood Portfolio Review` (PRE: today's `PRE` or the latest `EOD`; MID: `MID`; AH: `EOD`; WKND: `WEEKBOOK` + the week's `EOD`) goes **verbatim in Section 7** and is reconciled: `Book reconcile: feed NAV $X vs live $Y (Δ Z%) · short lines feed N vs live M`. If they differ by more than 2%, or the line counts differ, use the live numbers and name the difference. If there's no PDF, say so and use the live pull alone. |
+| **Book source** | A live Robinhood pull: `get_portfolio`, `get_equity_positions`, `get_option_positions` (all pages, nonzero only), working orders (`get_option_orders` / `get_equity_orders`, state confirmed) and the session's fills (state filled, plus `get_pnl_trade_history` for GTCs created on earlier days). The newest WarRoom PDF for this mode in the Drive folder `Robinhood Portfolio Review` (PRE: today's `PRE` or the latest `EOD`; MID: `MID`; AH: `EOD`; WKND: `WEEKBOOK` + the week's `EOD`) is **not pasted** (the live pull supersedes it). Section 7 gets its link, its run time, its breach list in one line, and the reconcile line: `Book reconcile: feed NAV $X vs live $Y (Δ Z%) · short lines feed N vs live M`. If they differ by more than 2%, or the line counts differ, use the live numbers and name the difference. If there's no PDF, say so and use the live pull alone. |
 | **Quote source** | Robinhood `get_equity_quotes` and `get_option_quotes` for every held name and every open short. They take up to 20 ids per call, so batch them. Use `get_equity_historicals` for prior closes and gap checks. |
 | Class and Floor B | The CLASS and Floor B columns in the WarRoom PDF appendix. If a name is missing: LC rules, `class? UNVERIFIED`. |
-| Indices, VIX, futures | Robinhood `get_index_quotes`. Then IBKR `get_price_snapshot` (futures) or Twelve Data ETF proxies (SPY, QQQ, DIA, IWM), labelled as proxies. |
-| Rates, FX, commodities, crypto | Alpha Vantage (`TREASURY_YIELD`, `FX_DAILY`, `BRENT`, `WTI`, `GOLD_SILVER_SPOT`) or Twelve Data, then web search for intraday marks with a visible timestamp |
+| Indices, VIX, futures | Robinhood `get_index_quotes` (SPX, NDX, VIX, VIX1D, VXN where offered). RUT if restricted: IWM, labelled proxy. Futures: IBKR `get_price_snapshot` (ES, NQ, YM, RTY front month). |
+| Yields | Alpha Vantage `TREASURY_YIELD` (maturity 2year, 10year, 30year; daily close). Intraday: a timestamped page, else the daily close labelled `(close)`. |
+| DXY, FX | Twelve Data `get_quote` (DXY, EUR/USD, USD/JPY); if DXY is missing, IBKR `get_price_snapshot` on the DX future, labelled. |
+| Commodities | Alpha Vantage `BRENT`, `WTI`, `GOLD_SILVER_SPOT`; Twelve Data for intraday marks |
+| Crypto | Robinhood `get_crypto_quotes` (BTC-USD, ETH-USD) |
+| Credit | Robinhood quotes on HYG and LQD, labelled `ETF proxy` |
 | Earnings, filings, news | Robinhood `get_earnings_calendar`, `get_earnings_results`, `get_sec_filing_index`; Quartr for releases and transcripts; Zacks `get_real_time_news`; then web search |
 | IV Rank for the put screener (R1) | IBKR `get_option_data` (IV percentile 52w / 26w). If unavailable: `IVR unverified`. |
 | Retail sentiment | Stocktwits `get_sentiment` / `get_trending_symbols`; otherwise N/A |
 | Math | Code execution with the formulas in core-rules §6. Show the inputs. |
+| Greeks line | Compute from the `get_option_quotes` already pulled: net delta $ = Σ(Δ × 100 × qty × spot) over option lines + Σ(shares × spot); theta $/day = Σ(θ × 100 × qty); vega $/pt = Σ(vega × 100 × qty). Short qty is negative. Lines with no Greeks count as Δ −1 if ITM (put), else are listed as excluded. Label it `computed from Robinhood quotes, <time>`. |
 | Stress source | The WEEKBOOK PDF's S1–S5 table, tagged `STALE (as of <PDF time>)`; otherwise N/A. Never estimate. |
 | Journal | Read the Google Sheet `Trade Journal` with Drive `read_file_content`. Claude can't edit Sheets, so AH and WKND put the new rows in Section 11 (AH) or Section 6 (WKND) as a `Journal rows to paste` table in the sheet's column order, and list them in the chat reply. |
 | Save | See *Save (Claude)* below. |
