@@ -2,7 +2,7 @@
 
 The Gemini edition can't reach Robinhood, so the WarRoom PDFs in `Robinhood Portfolio Review` are its only view of the book and of held-name prices. When the PDF leaves something out, Gemini goes looking on Google Search. Search is unreliable for microcap quotes, and that is where figures like MRNA $54 vs $222 came from.
 
-Add the block below to the Claude skill that writes the PDFs (`daily-portfolio-audit`, and the weekly audit for WEEKBOOK). The 1–2 page limit applies to the narrative only. These tables go on appendix pages.
+**Done for `daily-portfolio-audit`:** the updated skill in `skills/daily-portfolio-audit/` (zip: `skills/daily-portfolio-audit.zip`) already writes this appendix, plus an optional PRE snapshot. Upload it in claude.ai to replace the old one. The block below is for any other skill that writes WarRoom PDFs, such as the weekly WEEKBOOK. The 1–2 page limit applies to the narrative only; these tables go on appendix pages.
 
 ---
 **Paste into the audit skill:**
@@ -10,8 +10,8 @@ Add the block below to the Claude skill that writes the PDFs (`daily-portfolio-a
 > **Appendix for the market reports (always include, after the narrative; plain tables, one row per line, no merged cells):**
 > 1. **Header:** account(s) · audit type (PRE / MID / EOD / WEEKBOOK) · run time `HH:MM ET / HH:MM ICT` · session date.
 > 2. **SNAPSHOT:** NAV · cash · buying power · options value long/short · short put notional · net delta $ · theta $/day · vega $/pt.
-> 3. **STOCK POSITIONS (every line):** ticker · qty (negative = short) · cost basis · spot · spot time · unrealized $ · unrealized %.
-> 4. **OPTION POSITIONS (every line, not just flagged ones):** ticker · type · strike · expiry · qty (negative = short) · avg open price · mark · Δ · DTE · cushion % · % captured.
+> 3. **STOCK POSITIONS (every line):** ticker · class (LC/MC or BIO/SC) · qty (negative = short) · cost basis · spot · spot time · unrealized $ · unrealized %.
+> 4. **OPTION POSITIONS (every line, not just flagged ones):** ticker · class · Floor B · type · strike · expiry · qty (negative = short) · avg open price · mark · Δ · DTE · cushion % · % captured.
 > 5. **QUOTES:** every underlying held or optioned: last · prior close · pre-market or after-hours mark if any · quote time.
 > 6. **FILLS (this session):** time · ticker · contract or shares · side · qty · price · opening/closing.
 > 7. **WORKING ORDERS:** ticker · contract · side · qty · limit · tif · placed time.

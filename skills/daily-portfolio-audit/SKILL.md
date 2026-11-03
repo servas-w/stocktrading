@@ -1,6 +1,6 @@
 ---
 name: "daily-portfolio-audit"
-description: "Lean twice-daily audit (midday during the US session, and after the close) of Robinhood trades, the open option book and held stock lots, written as a 1-2 page PDF and uploaded to the Google Drive folder Robinhood Portfolio Review for Gemini's daily stock report. Use when the user says audit my portfolio, audit, midday audit, daily audit, run daily war room audit, run daily audit -> Drive PDF, yesterday's trades audit or similar. Audits against the War Room Playbook v2: velocity profit-take, OPP tagging for shorts under 30 DTE, ITM-at-21-DTE action, defense at delta -0.30 or spot within 7% of strike, one opening ticket per name per day, 10% NAV cap counting held shares, held-lot discipline, IV gate. Not for underwriting new tickers."
+description: "Lean twice-daily audit (midday during the US session, and after the close) of Robinhood trades, the open option book and held stock lots, written as a 1-2 page PDF plus a data appendix, uploaded to the Google Drive folder Robinhood Portfolio Review for Gemini's daily stock report. Optional third run: a pre-market snapshot. Use when the user says audit my portfolio, audit, midday audit, daily audit, pre-market snapshot, run daily war room audit, run daily audit -> Drive PDF, yesterday's trades audit or similar. Audits against the War Room Playbook v2: velocity profit-take, OPP tagging for shorts under 30 DTE, ITM-at-21-DTE action, defense at delta -0.30 or spot within 7% of strike, one opening ticket per name per day, 10% NAV cap counting held shares, held-lot discipline, IV gate. Not for underwriting new tickers."
 ---
 
 # Daily Portfolio Audit (lean, Playbook v2)
@@ -11,20 +11,22 @@ Goal: the War Room's compliance check at about a third of the compute. Pull only
 - **Read-only.** Never place, cancel or replace orders. Stage tickets only: `STAGE: BTC <qty> <TICKER> <EXP> <STRIKE>P @ <= $x GTC - reason (Rule #)` or `STAGE: CANCEL STO ... - reason (Rule #)`.
 - **Robinhood MCP only** for data. No Gmail/Drive search for confirmations.
 - **Mask accounts:** main book ••6081 (account_number 5QR66081). Shadow Delta ••1686 was empty on 2026-09-29; skip it unless the user asks.
-- **Budget: ≤ 9 data calls** (the Drive upload doesn't count). Hitting it = stop and mark the rest UNVERIFIED.
+- **Budget: ≤ 9 data calls**, or ≤ 11 when the book needs the overflow quote calls (see calls 7 and 8). The Drive upload doesn't count. Hitting it = stop and mark the rest UNVERIFIED.
 - **One run per chat.** Start a new chat for every run (two per day).
 
-## Two runs a day (pick the mode from the Da Nang clock)
+## Two runs a day, plus an optional pre-market snapshot (pick the mode from the Da Nang clock)
 The user is in Da Nang (UTC+7) and runs this twice a day. Label every file by the **US session date** it covers, so the names sort in time order and Gemini's "most recent file" is always the latest look at the book.
 
 | Run | Da Nang time | US time | Mode | Covers | File suffix |
 |---|---|---|---|---|---|
 | Midday | ~00:00 | 13:00 ET (12:00 ET after US DST ends 1 Nov) | **MID** | today's session so far | `_1-MID` |
 | Morning | ~09:00 | after the close | **EOD** | the full previous session (Monday covers Friday) | `_2-EOD` |
+| Evening (optional) | ~20:45 (19:45 in US daylight time) | 08:45 ET | **PRE** | pre-market marks for today's session | `_0-PRE` |
 
 - EOD: `SESSION_START` = session date + `T04:00:00Z`.
 - MID: `SESSION_START` = session date + `T13:30:00Z` (09:30 ET open; `T14:30:00Z` after DST ends). Marks are live, not closing. Add an "Afternoon watch" line: shorts within 7% of strike or at Δ ≤ -0.30, ITM shorts ≤ 21 DTE, and working orders still unfilled.
-- Order within a session: MID comes first, EOD follows about 9 hours later. EOD leads with what changed since that session's MID file; don't repeat its commentary.
+- PRE: only calls 1, 4, 6, 7 and 8 (plus overflow). The PDF is the Snapshot card and the Appendix, with no breach commentary. It exists so the Gemini pre-market report has real pre-market quotes for held names.
+- Order within a session: PRE (optional), then MID, then EOD about 9 hours later. EOD leads with what changed since that session's MID file; don't repeat its commentary.
 
 ## Tool loading (`limit` ≤ 3; search by bare tool name, since server prefixes vary by install)
 - `tool_search "get_portfolio get_equity_positions"`
@@ -43,8 +45,8 @@ The user is in Da Nang (UTC+7) and runs this twice a day. Label every file by th
 6. `get_equity_positions` (5QR66081) → held lots (quantity, average cost; negative quantity = short stock).
 
 **Turn 2 (parallel, 3):**
-7. `get_option_quotes` → every open short (velocity needs each mark) plus the session's fills; max 20 ids, one call. If more than 20 shorts: ≤ 30 DTE first, then largest notional; mark the rest UNVERIFIED.
-8. `get_equity_quotes` → underlyings of every open short (defense 7% test, ITM test) plus every held lot (unrealized); max 20 symbols, open-short underlyings first, then the largest lots.
+7. `get_option_quotes` → every open short (velocity needs each mark) plus the session's fills; max 20 ids per call. If there are more than 20 shorts, make **one more call** for the next 20 (≤ 30 DTE first, then largest notional). Anything still unquoted is marked UNVERIFIED and printed as `n/q` in the Appendix.
+8. `get_equity_quotes` → underlyings of every open short (defense 7% test, ITM test) plus every held lot (unrealized); max 20 symbols per call, open-short underlyings first, then the largest lots. If there are more than 20 symbols, make **one more call** for the next 20; print the rest as `n/q`.
 9. `get_equity_orders` (5QR66081, `state: "filled"`, `created_at_gte: SESSION_START`) → stock buys and sells this session (assigned shares dumped, adds to underwater lots, short stock).
 
 **Fill reconciliation:** session fills = call 2 ∪ the closing rows from call 5 (dedupe on symbol + strike + expiry + qty + price; tag call-5-only rows "GTC fill, order created earlier"). New positions from call 4 with no matching opening fill = a resting STO created earlier that filled this session: list them as opening fills too. Call 5 shows realizing trades only, so this positions check is the only way to see those.
@@ -64,15 +66,23 @@ The user is in Da Nang (UTC+7) and runs this twice a day. Label every file by th
 | 3 | **5 Concentration** | Per name: put strike × 100 × qty **+ shares held × spot**, ÷ NAV. Same-name long puts are shown as info but **not netted** | Name > 10% of NAV; BIO sleeve (sum of BIO/SC put notional + BIO/SC shares) > 25% |
 | 4 | **7 Held lots** | Each lot's spot vs average cost, threshold by universe.md class | Opening fill or working STO on a name > 15% under cost (BIO/SC) or > 25% (LC/MC); lots > 25% under cost listed with "plan? (written exit level or calls at/above basis)"; a BIO/SC short at or below expiry week with strike > Floor B (no assignment above Floor B); stock sold this session on a lot acquired ≤ 5 sessions ago (assigned shares dumped) if the acquisition date is visible, else UNVERIFIED |
 | 5 | **2 Profit take** | Each short with a mark | No working BTC (`pending_buy_quantity` 0); velocity met (% captured ≥ 2 × % elapsed and ≥ 25%) but still open; mark ≤ $0.05 or ≥ 80% captured still open (dead pennies) |
-| 6 | **3 Time / 9 Style** | Every opening fill and working STO | < 30 DTE → tag **OPP** (not a breach) and check it against Rules 1/4/5/7 like any short. Non-OPP: LC/MC outside 45–90 DTE or \|Δ\| > 0.20 at entry; BIO/SC outside 30–90 DTE. Scalp cap: OPP at ≤ 7 DTE plus other scalps > 1% of NAV at risk. Open non-OPP LC/MC shorts ≤ 21 DTE under 80% captured (close or roll) |
+| 6 | **3 Time / 9 Style** | Every opening fill and working STO | < 30 DTE → tag **OPP** (not a breach) and check it against Rules 1/4/5/7 like any short. Non-OPP: LC/MC outside 60–90 DTE (confirmed by Wilson 3 Nov 2026) or \|Δ\| > 0.20 at entry; BIO/SC outside 30–90 DTE. Scalp cap: OPP at ≤ 7 DTE plus other scalps > 1% of NAV at risk. Open non-OPP LC/MC shorts ≤ 21 DTE under 80% captured (close or roll) |
 | 7 | **4 One ticket** | Opening orders (fills + working) per underlying this session | > 1 opening ticket on a name |
 | 8 | **Gap: short stock** | Negative equity quantity | Short stock > 2% of NAV |
 | — | **1 IV gate / 6 Earnings** | Not pulled in lean mode | UNVERIFIED |
 
-## PDF (≤ 2 pages)
-- reportlab Platypus, **built-in Helvetica only, ASCII text** (write "Delta", "<=", "->"; no TTF embedding). Keeps the file ~10 KB so the base64 upload stays small.
+## PDF (narrative ≤ 2 pages, then the Appendix)
+- reportlab Platypus, **built-in Helvetica only, ASCII text** (write "Delta", "<=", "->"; no TTF embedding). Keeps the file small (~10 KB narrative, ~25 KB with the Appendix) so the base64 upload stays small.
 - Sections: 1 Snapshot card (session, NAV, BP, cash %, fills count and net credit, open shorts, no-GTC count, largest name % NAV incl. shares, held-lot unrealized) · 2 Fills table (tag GTC fills from earlier orders) · 3 Breach table by priority, with the rule # on every row · 4 Concentration (top 5, puts + shares) · 5 Held lots (top 5 by unrealized loss) · 6 Commentary: one Wendy observation + one question, one Axe point + ≤ 4 staged tickets · 7 War Room Contract · 8 UNVERIFIED list.
-- Filename: `WarRoom_<SESSION_DATE>_1-MID.pdf` or `WarRoom_<SESSION_DATE>_2-EOD.pdf` in `/mnt/user-data/outputs/`.
+- **Appendix: data for the Gemini market reports** (always included, on its own pages after the narrative; 7 pt Helvetica, ASCII, plain tables, one row per line, no merged cells, no wrapping inside a cell; it uses data already pulled, so it adds no calls). Gemini can't reach Robinhood, so this is its only view of the book. Print every row, not just flagged ones:
+  - **A1 Header:** account · run type (PRE/MID/EOD) · run time `HH:MM ET / HH:MM ICT` · session date.
+  - **A2 Snapshot:** NAV · cash · buying power · options value long/short · short put notional · net delta $ · theta $/day · vega $/pt (`n/a` where not pulled).
+  - **A3 Stock positions (every line):** ticker · class (universe.md) · qty (negative = short) · average cost · spot · quote time · unrealized $ · unrealized %.
+  - **A4 Option positions (every line):** ticker · class · Floor B (floors.md, or `n/a`) · type · strike · expiry · qty (negative = short) · credit or debit per share · mark · Delta · DTE · cushion % · % captured · working BTC (Y/N). Unquoted lines print `n/q`.
+  - **A5 Quotes:** every underlying in A3/A4: last · prior close · pre-market or after-hours mark if the quote has one · quote time.
+  - **A6 Fills this session** (MID/EOD): time · ticker · contract or shares · side · qty · price · open/close · `GTC fill, order created earlier` tag.
+  - **A7 Working orders:** ticker · contract · side · qty · limit · time in force · created time.
+- Filename: `WarRoom_<SESSION_DATE>_0-PRE.pdf`, `WarRoom_<SESSION_DATE>_1-MID.pdf` or `WarRoom_<SESSION_DATE>_2-EOD.pdf` in `/mnt/user-data/outputs/`. Keep the `PRE` / `MID` / `EOD` token: the Gemini reports find their feed by it.
 
 ## Upload
 - `base64 -w0 <pdf>` once, then the `create_file` tool the Drive search returned, with `title` = filename, `base64Content`, `contentMimeType: "application/pdf"`, `disableConversionToGoogleType: true`, **`parentId: "1kchKBFGOQov1A6EZNxkgdD0qyzlTKttW"`** (folder "Robinhood Portfolio Review").

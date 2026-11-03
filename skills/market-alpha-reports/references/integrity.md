@@ -13,7 +13,7 @@ The Nov 2 pre-market also built its triggers from a highlight list instead of th
 |---|---|---|---|
 | 1 | Book feed | The `Book feed:` line is present with source, time, NAV and line counts. The feed age suits the mode. | Put `STALE FEED (<age>)` first in the Bottom Line |
 | 2 | Trigger scan | `Trigger scan: N lines checked · K hits`, where N = the short option lines in the Book feed line | Rescan; add the missing hits |
-| 3 | Concentration | Every % NAV row is labelled `naked` / `spread width` / `net of hedge`, with collateral in its own column | Recompute with `core-rules.md` §3 |
+| 3 | Concentration | R5 % NAV uses the official gross test (puts + shares, long puts not netted); the net-of-hedge column is labelled as information only | Recompute with `core-rules.md` §3 |
 | 4 | Published closes | Every "prior close" matches the latest AH/WKND `PUBLISHED CLOSES:` | Restore it; add `(source now shows X)` |
 | 5 | Continuity | Every unexplained move is tagged `UNVERIFIED`. Benchmarks are left out of Key levels; held names stay in with `check broker before acting`. | Tag it and move it |
 | 6 | Consistency | A ticker has the same price, strike and quantity in every section | Fix it to the Section 7 value |

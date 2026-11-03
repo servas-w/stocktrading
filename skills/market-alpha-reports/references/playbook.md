@@ -1,34 +1,27 @@
 # Playbook v2 reference (rules, gates and terms)
 
-This is the only place the reports take rule definitions from. Cite a rule by **name and number**, for example `R3 ITM ≤ 21 DTE`. If another installed skill numbers a rule differently, use this file and add `(see playbook.md)`.
+This is the only place the reports take rule definitions from. The rule numbers follow the official Playbook v2 numbering in the Stock Trading project instructions (as used by `daily-portfolio-audit`). If the project instructions change, update this file. Cite a rule by **number and name**, for example `R3 Time`. LC/MC rules apply to large- and mid-caps; BIO/SC rules apply to biotech and small-caps. Each name's class comes from the CLASS column in the WarRoom PDF appendix. If a name is missing from it, apply the LC rules and tag it `class? UNVERIFIED`.
 
-Confirmed by Wilson on 3 Nov 2026.
+Confirmed by Wilson on 3 Nov 2026: a 60–90 DTE entry window for LC/MC, and the defaults below.
 
-## Entry rules (new short premium)
-| # | Rule | Gate |
+## The rules
+| # | Rule | Gate → required action |
 |---|---|---|
-| R1 | IV gate | Sell naked premium only when IV Rank ≥ 50. Defined-risk spreads are exempt from the gate (spread exception). If IVR can't be sourced, print `IVR unverified` and grade the entry B at best. |
-| — | DTE and delta window | **60–90 DTE** at Δ 0.10–0.20 (grade A). Outside 60–90 DTE but ≥ 30 DTE, or an event before expiry, is grade B. Δ ≥ 0.25, ITM at entry, or an unstructured binary event before expiry is grade C. |
-| — | Under-30-DTE shorts | Allowed since 2 Oct, but each one is tagged `OPP` (opportunistic) and needs a written exit. Not a breach on its own. |
-| — | One opening ticket per name per day | Several fills of one order count as one ticket. A second opening ticket on the same name the same day is a pacing breach. |
-| — | Sub-$5 biotech | Selling at Δ ≥ 0.40 is stock replacement: grade C unless the cash floor (Floor A/B) is at or above the strike. |
-| — | No LEAPS shorts | No short puts expiring in 2028 or later. |
-| — | Debit trades | Need 3:1 reward-to-risk at entry. No directional long calls or puts into a binary print. |
-
-## Management rules (open positions)
-| # | Rule | Trigger → required action |
-|---|---|---|
-| R2 | Velocity profit-take / dead collateral | Rest a 50% GTC buy-to-close at fill. A short at ≥ 80% captured, or marked ≤ $0.05, is **dead collateral**: close it this session. |
-| R3 | ITM at ≤ 21 DTE | Close it, or roll 30–60 days for a net credit, **this session**. |
-| R4 | Defense | Spot within 7% of strike, or Δ ≤ −0.30: defend (roll out/down for a credit, or close). **Never add new shorts on a tested name**: no new opening sale on a name that has a short line ITM, within 7%, or at Δ ≤ −0.30. |
-| R5 | Concentration | Single name ≤ 10% NAV, counting held shares (amber ≥ 8%, red > 10%), using the method in `core-rules.md`. Biotech sleeve ≤ 25% NAV. |
-| R6 | Held-lot freeze | No covered calls below cost basis, and no new short puts on a name whose held lot is underwater. |
-| R7 | Held-lot plan | Every flagged held lot needs a written plan within 7 days of first being flagged. Cancel resting sell-to-open orders on underwater lots. After 7 days with no plan: `Rule 7 deadline passed`. |
-| R8 | Short stock | Hard buy-to-cover stop at +15% from entry. No new short stock on sub-$5 clinical biotech. |
-| R9 | Reserved (unused) | — |
+| R1 | IV gate | Sell naked premium only when IV Rank ≥ 50. Defined-risk spreads are exempt (spread exception). If IVR can't be sourced, print `IVR unverified`. |
+| R2 | Profit take | Rest a 50% GTC buy-to-close at fill. **Velocity:** % captured ≥ 2 × % of time elapsed **and** ≥ 25% → take the profit. **Dead pennies:** mark ≤ $0.05 or ≥ 80% captured, still open → close this session. A short with no working buy-to-close is flagged. |
+| R3 | Time | ITM short at ≤ 21 DTE → act within 1 session (close, or roll 30–60 days for a net credit); `2nd session` if it was already flagged. Shorts opened under 30 DTE are allowed but tagged **OPP**. Non-OPP LC/MC shorts at ≤ 21 DTE and under 80% captured → close or roll. |
+| R4 | Defense + one ticket | **LC/MC:** Δ ≤ −0.30 or spot within 7% of strike → defend. **BIO/SC:** strike above Floor B with spot within 15% of strike → defend (if Floor B is missing or stale, flag at 15% with `Floor B UNVERIFIED`). **No adding in defense:** no opening fill or working sell-to-open on a triggered name. **One opening ticket per name per session.** |
+| R5 | Concentration | Per name: short-put strike × 100 × qty **+ shares held × spot**, ÷ NAV ≤ 10% (amber ≥ 8%, red > 10%). Same-name long puts are shown but **not netted**. BIO/SC sleeve (BIO/SC put notional + shares) ≤ 25% of NAV. |
+| R6 | Earnings | Check whether earnings land before expiry for every short. If the date isn't sourced: `earnings date UNVERIFIED — check before expiry`. |
+| R7 | Held lots | **Underwater thresholds:** lots more than 15% below cost (BIO/SC) or 25% (LC/MC) → no new puts and no working sell-to-open on that name. Covered calls only at or above basis. Lots more than 25% below cost need a written plan (exit level, or calls at/above basis) within 7 days of first being flagged, otherwise `Rule 7 deadline passed`. Never dump assigned shares within 5 sessions of assignment. A BIO/SC short in expiry week with strike above Floor B is flagged. |
+| R8 | Short stock | Hard buy-to-cover stop at +15% from entry. No new short stock on sub-$5 clinical biotech. Short stock over 2% of NAV is flagged. |
+| R9 | Style (entry window) | **LC/MC: 60–90 DTE, \|Δ\| ≤ 0.20 at entry. BIO/SC: 30–90 DTE.** OPP shorts are exempt from the window. Scalp cap: OPP shorts at ≤ 7 DTE plus other scalps ≤ 1% of NAV at risk (at risk per put = (strike − credit) × 100 × qty, or spread width − credit). |
 | R10 | Lottery longs | Long options at ≤ $0.10 need a stated purpose (a hedge or parachute wing). Opening more than 5 per day is a breach. |
 
-Rule numbers: past reports used `Rule 2` for both dead collateral and ITM, and `Rule 4` for both defense and pacing. The table above is the single numbering from now on.
+## Other entry standards (not numbered)
+- **Grades:** A = fits every rule. B = an event before expiry, or DTE outside the R9 window but ≥ 30. C = Δ ≥ 0.25, ITM at entry, an unstructured binary, or a sub-$5 biotech sold at Δ ≥ 0.40 (stock replacement) without the cash floor at or above the strike.
+- No short puts expiring in 2028 or later (no LEAPS shorts).
+- Debit trades need 3:1 reward-to-risk at entry. No directional long calls or puts into a binary print.
 
 ## Book limits
 - Dry-powder floor: cash plus cash-like holdings (SGOV, STRC) of 15–20% of NAV.
@@ -36,11 +29,11 @@ Rule numbers: past reports used `Rule 2` for both dead collateral and ITM, and `
 - Short Bench sizing: 2% of NAV at risk per idea.
 
 ## Terms used in the templates
-- **HARVEST / HOLD:** HARVEST is a short at ≥ 50% captured or dead collateral (close it now). HOLD is below target; show it if it's within 10% of target.
+- **HARVEST / HOLD:** HARVEST is a short that meets R2 velocity, is ≥ 50% captured, or is a dead penny (close it now). HOLD is below target; show it if it's within 10% of target.
 - **Harvest board / Missed harvest:** the HARVEST rows with a buy-to-close price. Missed harvest = HARVEST rows still open at the close, with the $ total.
 - **Tripwire top 5 / Tripwire Map:** the 5 short lines (Map: all lines) with the smallest cushion, showing strike, spot, cushion %, Δ and DTE.
-- **Book Map:** every position grouped by theme, with % NAV from `core-rules.md`.
-- **Book Triggers:** the full list of R2/R3/R4/R5/R6/R7/R8 hits from the full trigger scan.
+- **Book Map:** every position grouped by theme, with R5 % NAV (gross) and the net-of-hedge column from `core-rules.md`.
+- **Book Triggers:** the full list of R2/R3/R4/R5/R6/R7/R8/R9 hits from the full trigger scan.
 - **Greeks line:** net delta $, theta $/day, vega $/vol point, from the book source.
 - **Floor A / Floor B:** biotech cash floor per share (A: net cash ÷ fully diluted shares; B: A plus a risk-weighted pipeline value).
 - **Parachute wing:** a cheap long put below a short put that caps the crash loss.

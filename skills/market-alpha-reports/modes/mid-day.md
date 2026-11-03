@@ -33,7 +33,7 @@ War Room Handoff (core-rules §9; ACTIONS = afternoon orders, plus the PRE actio
 - Every market number refers to the window since 09:30 ET. Overnight context appears only as a labelled comparator.
 - Harvest: recompute with live marks when the quote source has them; otherwise label `as of feed <time>`.
 - A section with nothing new since PRE gets one line (`No change since PM-<date> — <number>`).
-- Working orders that open risk on a triggered name (R4 add on a tested name, R6 underwater lot, LEAPS) go first in the Bottom Line as `Cancel:`, before any new idea.
+- Working orders that open risk on a triggered name (R4 add in defense, R7 underwater lot, LEAPS) go first in the Bottom Line as `Cancel:`, before any new idea.
 
 ## Common mistakes
 - Re-reporting pre-market news as if it were new.

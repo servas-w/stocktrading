@@ -11,8 +11,8 @@ Gems become read-only on 17 Nov. On 17 Dec, Google turns each remaining Gem into
 
 The skill contains instructions only, with no scripts. The math runs in Gemini's code execution, using the formulas in `references/core-rules.md`.
 
-## 3. Upgrade the Claude audit PDFs (needed for reliable held-name prices)
-Paste the block from `references/warroom-feed-spec.md` into the Claude audit skill that writes the WarRoom PDFs (`daily-portfolio-audit` and the weekly audit). Without full position, quote and fill tables in the PDF, Gemini has to fall back to Google Search for microcap prices, which is where past reports went wrong. The optional PRE snapshot at 20:45 ICT gives the pre-market report real pre-market quotes.
+## 3. Replace the Claude audit skill (needed for reliable held-name prices)
+Upload `skills/daily-portfolio-audit.zip` in **claude.ai** (not Gemini), under Settings → Capabilities → Skills, replacing the old `daily-portfolio-audit`. The new version adds a data appendix to every WarRoom PDF: every position with class and Floor B, quotes, fills and working orders. It also adds an optional PRE snapshot run at 20:45 ICT (19:45 in US daylight time) that gives the pre-market report real pre-market quotes. `references/warroom-feed-spec.md` is documentation only; don't upload it anywhere.
 
 ## 4. Scheduled actions (one per mode)
 | Report | US standard time (early Nov to mid Mar) | US daylight time (mid Mar to early Nov) | Prompt |

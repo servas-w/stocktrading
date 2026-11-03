@@ -14,22 +14,20 @@ Everything else is defined here. Rule names and terms come from `playbook.md`.
 - Positions, quantities, strikes, cost basis, cash and NAV come only from the book source. Never take them from an earlier report, from memory or from a search result.
 - Show only the accounts the book source returns. Never infer another account's positions.
 - First line of Section 7: `Book feed: <source> (as of <time>) · NAV $X · short option lines N · stock lines M`.
-- **Full trigger scan:** check every short line against R2 (≥ 80% captured or mark ≤ $0.05), R3 (ITM at ≤ 21 DTE), and R4 (within 7% of strike or Δ ≤ −0.30). Check every name against R5, every held lot against R6/R7, and every short stock line against R8. Every hit goes into Book Triggers, even if the book source's own summary doesn't mention it. Print `Trigger scan: N lines checked · K hits`.
+- **Full trigger scan:** check every short line against R2 (velocity, ≥ 80% captured or mark ≤ $0.05, no working buy-to-close), R3 (ITM at ≤ 21 DTE; OPP tags), R4 (LC/MC: within 7% of strike or Δ ≤ −0.30; BIO/SC: Floor B rule; adds in defense; one ticket per name) and R6 (earnings before expiry). Check every name against R5, every held lot against R7, every short stock line against R8, and every opening fill against R9. Every hit goes into Book Triggers, even if the book source's own summary doesn't mention it. Print `Trigger scan: N lines checked · K hits`.
 
-## 3. Concentration (R5): one method, step by step
-For each underlying:
-1. **Shares:** |shares| × spot.
-2. **Pair hedges:** match each short put with long puts on the same underlying at the same or a lower strike that expire **on or after** the short put. Take the highest long strike first, quantity for quantity. A paired quantity is a spread: exposure = (short strike − long strike) × 100 × qty. A same-strike calendar therefore counts as 0, labelled `net of hedge`. Long puts that expire **before** the short put do not pair; flag them `hedge expires first`.
-3. **Unpaired short puts:** strike × 100 × qty, labelled `naked`.
-4. **Calls:** short calls covered by shares add nothing. A naked short call is flagged `unlimited` and listed separately.
-5. **% NAV** = (1 + 2 + 3) ÷ NAV. Amber ≥ 8%, red > 10%. Biotech sleeve = sum over biotech names ÷ NAV; the cap is 25%.
+## 3. Concentration (R5): the official test plus a net-of-hedge column
+**R5 test (official, matches the WarRoom PDF):** per name, % NAV = (short-put strike × 100 × qty + shares held × spot) ÷ NAV. Same-name long puts are **not netted**. Amber ≥ 8%, red > 10%. BIO/SC sleeve = BIO/SC put notional + BIO/SC shares, cap 25% of NAV. This number decides R5 breaches.
 
-Report **collateral tied up** (gross strike × 100 × qty, before pairing) in its own column. A fully hedged calendar can carry no risk and still lock up buying power: that's a dead-collateral (R2) problem, not an R5 breach.
+**Net-of-hedge column (information only, never used for R5):** shows the risk that remains after hedges, so the fix can be sized:
+1. Pair each short put with long puts on the same underlying, at the same or a lower strike, that expire **on or after** the short put. Take the highest long strike first, quantity for quantity. Exposure = (short strike − long strike) × 100 × paired qty. A same-strike calendar nets to 0.
+2. Unpaired short puts count at strike × 100 × qty. Long puts that expire **before** the short put don't pair; flag them `hedge expires first`.
+3. Add shares × spot. Short calls covered by shares add nothing. A naked short call is flagged `unlimited`.
 
 Worked examples (book of late Oct 2026, NAV ≈ $343K):
-- **ACRS:** 233 short Nov $3P + 237 long Dec $3P → all 233 pair at the same strike → exposure $0 (`net of hedge`), collateral $69,900 → R2 dead collateral, not R5.
-- **CMPX:** 251 short Nov $1P + 207 long Dec $1P → 207 pair at $0; 44 × $100 = $4,400 `naked` → 1.3% NAV.
-- **CAPR:** 283 short Dec $2P + long Nov 27 $2P → the longs expire first, so they don't pair → 283 × $200 = $56,600 `naked` (`hedge expires first`) → 16.5% NAV → R5 red.
+- **ACRS:** 233 short Nov $3P (+ 237 long Dec $3P) → R5 = $69,900 = 20.4% NAV, **red**. Net of hedge: $0, because the calendar covers it. The cheapest cure is closing the dead pennies (R2) for about $0.05.
+- **CMPX:** 251 short Nov $1P (+ 207 long Dec $1P) → R5 = $25,100 = 7.3%, below amber. Net of hedge: 44 × $100 = $4,400 = 1.3%.
+- **CAPR:** 283 short Dec $2P (+ long Nov 27 $2P) → R5 = $56,600 = 16.5%, **red**. Net of hedge: the same, `hedge expires first`.
 
 ## 4. Repeat triggers
 - Each Handoff carries `TRIGGERS:` (see §9). When a trigger is still open, copy it forward and add 1 to its count. When it's cleared, mark it `cleared` once, then drop it.
