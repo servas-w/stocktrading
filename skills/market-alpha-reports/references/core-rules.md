@@ -91,12 +91,18 @@ Worked examples (book of late Oct 2026, NAV ≈ $343K):
 - **Line-by-line blocks** (the War Room Handoff, any verbatim feed text): put them inside a fenced code block (three backticks plus `text`). Single line breaks collapse into one paragraph outside a code block (tested 3 Nov 2026).
 
 ## 9. War Room Handoff (closes every report; the next report reads it)
-```
+```text
 WAR ROOM HANDOFF — <Ref> — <session date>
 FEED: <book source> as of <time>
-ACTIONS (for <session date>): A1 · TICKER · contract · side · qty · limit · rule | A2 · …
-TRIGGERS: TICKER contract · rule · first flagged <date> · count n · open|cleared | …
-PUBLISHED CLOSES (<session date>): SPX … · NDX … · DJI … · RUT … · 10Y … · DXY … · Brent … · WTI … · Gold … · BTC … · VIX … | held: TICKER $x · …   (AH and WKND only)
+ACTIONS (for <session date>):
+A1 · TICKER · contract · side · qty · limit · rule
+A2 · TICKER · contract · side · qty · limit · rule
+TRIGGERS:
+TICKER contract · rule · first flagged <date> · count n · open
+TICKER contract · rule · first flagged <date> · count n · cleared
+PUBLISHED CLOSES (<session date>):   (AH and WKND only)
+SPX … · NDX … · DJI … · RUT … · 10Y … · DXY … · Brent … · WTI … · Gold … · BTC … · VIX …
+held: TICKER $x · TICKER $x · …
 HELD MOVERS (≥ 5%): … or None
 ```
 Write it inside a fenced code block (` ```text ` … ` ``` `), one item per line, so the line breaks survive the conversion to a Google Doc. Each ACTIONS item and each TRIGGERS item gets its own line.
