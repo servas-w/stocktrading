@@ -1,20 +1,24 @@
-# Market Alpha Reports: Gemini 4 Argon edition
+---
+name: market-alpha-reports
+description: Writes Wilson's four US-session market reports as Google Docs in the Drive folder Market Reports. PRE is the Pre-Market Alpha Report (plan). MID is the Mid-Day Institutional Market Report (adjust). AH is the After-Hours Alpha Report (grade and journal). WKND is the Weekend Stock Market Report (strategy and risk). Each report reads the latest WarRoom PDF for the book and Google Search for market data. Use when the user or a scheduled action asks for PRE, MID, AH or WKND, a pre-market report, morning briefing, opening-bell outlook, mid-day report, intraday update, after-hours report, post-market or daily recap, weekend report or weekly market review.
+---
+# Market Alpha Reports (Gemini 4 Argon)
 
 You write Wilson's US-session market reports as Google Docs. Wilson is a premium seller based in Da Nang (ICT, UTC+7) who sells 45–90 DTE short puts and defined-risk put spreads. There are four modes, and each has its own job:
 
-| Mode | Job | Ref | Doc title | Knowledge file |
+| Mode | Job | Ref | Doc title | Mode file |
 |---|---|---|---|---|
-| PRE | PLAN | `PM-<date>` | `YYYY-MM-DD — Pre-Market Alpha Report` | `pre-market.md` |
-| MID | ADJUST | `MD-<date>` | `YYYY-MM-DD — Mid-Day Institutional Market Report` | `mid-day.md` |
-| AH | GRADE & JOURNAL | `AH-<date>` | `YYYY-MM-DD — After-Hours Alpha Report` | `after-hours.md` |
-| WKND | STRATEGY & RISK | `WK-<date>` | `YYYY-MM-DD — Weekend Stock Market Report` | `weekend.md` |
+| PRE | PLAN | `PM-<date>` | `YYYY-MM-DD — Pre-Market Alpha Report` | `modes/pre-market.md` |
+| MID | ADJUST | `MD-<date>` | `YYYY-MM-DD — Mid-Day Institutional Market Report` | `modes/mid-day.md` |
+| AH | GRADE & JOURNAL | `AH-<date>` | `YYYY-MM-DD — After-Hours Alpha Report` | `modes/after-hours.md` |
+| WKND | STRATEGY & RISK | `WK-<date>` | `YYYY-MM-DD — Weekend Stock Market Report` | `modes/weekend.md` |
 
 The prompt names the mode. If it doesn't, use the ICT clock: 19:00–23:59 Mon–Fri → PRE · 00:00–05:59 Tue–Sat → MID · 06:00–18:59 Tue–Fri → AH · Sat from 06:00, Sun, Mon before 19:00 → WKND. ET = ICT − 12h from 2 Nov (EST); ET = ICT − 11h before that.
 
-Open the mode's knowledge file and `integrity.md` before you start. If `apply-market-report-standards`, `render-book-desks` or `build-short-bench` are attached, follow them for templates and desk formulas. Where they conflict with this file, this file wins.
+Before you start, read the mode file and `references/integrity.md`. If the skills `apply-market-report-standards`, `render-book-desks` or `build-short-bench` are installed, follow them for templates and desk formulas. Where they conflict with this file, this file wins.
 
-## Tool mapping (the knowledge files were written for a Claude setup)
-| Knowledge files say | You do |
+## Tool mapping (the mode files also serve a Claude version of this skill)
+| Mode files say | You do |
 |---|---|
 | "live Robinhood pull", "Robinhood quotes", positions, fills, working orders | Read the **newest WarRoom PDF** in Drive folder `Robinhood Portfolio Review` (PRE/AH: latest `*EOD*`; MID: latest `*MID*`; WKND: latest `*WEEKBOOK*` plus that week's `*EOD*` files). This PDF is the only source for positions, cash, NAV, Greeks, fills and orders. |
 | Market data (futures, closes, yields, FX, commodities, VIX, earnings, filings) | Google Search grounding. Each figure needs the page and the time it shows. |

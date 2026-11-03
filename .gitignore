@@ -5,3 +5,4 @@ __pycache__/
 state/
 *.pickle
 .pytest_cache/
+dist/
