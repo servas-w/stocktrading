@@ -5,26 +5,31 @@ Gems become read-only on 17 Nov. On 17 Dec, Google turns each remaining Gem into
 
 ## 2. Install
 1. Build the package from the repo root with `skills/build_gemini_skill.sh`, or use `skills/market-alpha-reports-gemini.zip`.
-2. In Gemini, go to Skills → Add skill and upload the **folder** `market-alpha-reports` (best). Or upload the zip; its root holds `SKILL.md`, `modes/` and `references/`.
-3. Optional: also upload `apply-market-report-standards`, `render-book-desks` and `build-short-bench` as their own skills.
-4. Make sure Gemini can use Google Drive, Docs, Sheets and Search.
-5. To update later, go to More → Replace skill and upload the new folder.
+2. In Gemini, go to Skills → Add skill and upload the **folder** `dist/gemini/market-alpha-reports` (best). Or upload the zip; its root holds `SKILL.md`, `modes/` and `references/`.
+3. Make sure Gemini can use Google Drive, Docs, Sheets and Search.
+4. To update later, go to More → Replace skill and upload the new folder.
 
-The skill contains instructions only, with no scripts. Gemini skills can't run bundled scripts that reach the web, so the math runs in Gemini's own code execution, using the formulas in `SKILL.md`.
+The skill contains instructions only, with no scripts. The math runs in Gemini's code execution, using the formulas in `references/core-rules.md`.
 
-## 3. Scheduled actions (one per mode)
-Times are Da Nang (ICT) during US standard time, from 2 Nov to the second Sunday of March. During US daylight time, run PRE at 20:00.
+## 3. Upgrade the Claude audit PDFs (needed for reliable held-name prices)
+Paste the block from `references/warroom-feed-spec.md` into the Claude audit skill that writes the WarRoom PDFs (`daily-portfolio-audit` and the weekly audit). Without full position, quote and fill tables in the PDF, Gemini has to fall back to Google Search for microcap prices, which is where past reports went wrong. The optional PRE snapshot at 20:45 ICT gives the pre-market report real pre-market quotes.
 
-| Schedule | Prompt |
-|---|---|
-| Mon–Fri 21:00 | `Use the market-alpha-reports skill: run PRE for today's US session.` |
-| Tue–Sat 00:30 | `Use the market-alpha-reports skill: run MID for the US session in progress.` |
-| Tue–Fri 09:30 | `Use the market-alpha-reports skill: run AH for the US session that just closed.` |
-| Sat 10:00 | `Use the market-alpha-reports skill: run WKND for the week that just ended, including Friday's close-out.` |
+## 4. Scheduled actions (one per mode)
+| Report | US standard time (early Nov to mid Mar) | US daylight time (mid Mar to early Nov) | Prompt |
+|---|---|---|---|
+| PRE | Mon–Fri 21:00 ICT | Mon–Fri 20:00 ICT | `Use the market-alpha-reports skill: run PRE for today's US session.` |
+| MID | Tue–Sat 00:30 ICT | Mon–Fri 23:30 ICT | `Use the market-alpha-reports skill: run MID for the US session in progress.` |
+| AH | Tue–Fri 09:30 ICT | Tue–Fri 09:30 ICT | `Use the market-alpha-reports skill: run AH for the US session that just closed.` |
+| WKND | Sat 10:00 ICT | Sat 10:00 ICT | `Use the market-alpha-reports skill: run WKND for the week that just ended, including Friday's close-out.` |
 
-Each run expects its WarRoom PDF to be in `Robinhood Portfolio Review` first. The Claude audits create them at about 09:00 ICT (EOD) and 00:00 ICT (MID). If an audit is late, the report flags `STALE FEED` instead of guessing.
+Change the PRE and MID schedules on the second Sunday of March and again on the first Sunday of November. The skill works out ET by itself, so only the schedule times need moving.
 
-## 4. Check the first run of each mode
-- The Bottom Line has a `Book feed:` line and at most 5 actions.
-- The Integrity line appears at the end of Works Cited.
+Each run expects its WarRoom PDF to be in `Robinhood Portfolio Review` first: EOD at about 09:00 ICT, MID at about 00:00 ICT (23:00 ICT in daylight time). If an audit is late, the report flags `STALE FEED` instead of guessing.
+
+## 5. Check the first run of each mode
+- The Bottom Line has at most 5 actions. Repeat triggers come first.
+- Section 7 starts with a `Book feed:` line and a `Trigger scan: N lines checked` line, and N matches the PDF.
+- Works Cited has a provenance line for every Bottom Line number, then the Integrity line.
+- The Handoff has FEED / ACTIONS / TRIGGERS, plus PUBLISHED CLOSES in AH and WKND.
 - The doc shows real headings, with no `#`, `**` or backticks, and only one doc exists for that day and mode.
+- In the PRE scorecard: a `Carry-in` line, not HIT grades.
