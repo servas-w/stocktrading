@@ -45,7 +45,7 @@ Score 1–10 on each criterion, with one line of justification each, then give t
 
 **Criteria, in order of preference:**
 1. Criteria the user supplies ("evaluate against X").
-2. **Trading or options targets:** Wilson's Playbook v2 and underwriting rules, which are DTE window (60–90 for new shorts; under 30 DTE needs an OPP tag), IV gate (IVR ≥ 50, spread exception), strike cushion and debt-adjusted floor, the 10% NAV cap counting held shares, one opening ticket per name per day, catalyst before expiry, velocity profit-take and defense triggers (delta −0.30 or spot within 7% of strike), and held-lot discipline (no puts on underwater lots).
+2. **Trading or options targets:** Wilson's Playbook v2 and underwriting rules, which are DTE window (60–90 for new shorts; under 30 DTE needs an OPP tag), IV gate as the underwriting skill in use defines it (large caps: IBKR IV Percentile 52w ≥ 60 and 26w ≥ 50, or IVR ≥ 50 when the user supplies Barchart IVR; Playbook v2 spread exception), strike cushion and debt-adjusted floor, the 10% NAV cap counting held shares, one opening ticket per name per day, catalyst before expiry, velocity profit-take and defense triggers (delta −0.30 or spot within 7% of strike), and held-lot discipline (no puts on underwater lots).
 3. **Anything else:** Accuracy · Evidence · Completeness · Internal consistency · Actionability · Risk disclosure · Clarity.
 
 List the gaps that cost points.
@@ -61,3 +61,4 @@ End with a **change log**:
 ## Modes
 - **"AC lite"** or **"quick critique"**: give only the top 3 weak assumptions, the top 3 defects and the top 3 failure paths, then a rewrite of the affected parts. No scorecard.
 - **"AC: <criteria>"**: use the given criteria for the Step 4 scorecard.
+- **"AC fresh"**: for a high-stakes target, tell the user that a review in a new chat, with only the target and its source data pasted in, avoids sharing this conversation's framing. Then run the normal pass.
