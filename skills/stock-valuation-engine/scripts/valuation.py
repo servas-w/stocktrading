@@ -251,14 +251,21 @@ def valu(x):
         tax_r, tax_src = min(0.25, max(0.10, sum(txs) / pretax_ttm)), "TTM effective, clamped 10-25%"
     else:
         tax_r, tax_src = (t_in, "input") if t_in is not None else (0.21, "ASSUMED 21%")
-    nonop = (pretax_ttm - op_ttm) if (pretax_ttm is not None and op_ttm is not None) else None
-    nonop_flag = bool(nonop is not None and op_ttm and abs(nonop) > 0.15 * abs(op_ttm))
-    core_eps = op_ttm * (1 - tax_r) / shares if (op_ttm and shares) else None
+    # recurring interest stays in core earnings: core pre-tax = op income - interest expense (when known)
+    ie = [f(r.get("int_exp")) for r in isq]
+    int_ttm = sum(abs(v) for v in ie) if len(ie) == 4 and None not in ie else None
+    core_pre = (op_ttm - (int_ttm or 0)) if op_ttm is not None else None
+    nonop = (pretax_ttm - core_pre) if (pretax_ttm is not None and core_pre is not None) else None
+    # with interest unknown, a net non-operating EXPENSE is assumed to be recurring interest: only gains get flagged
+    nonop_flag = bool(nonop is not None and op_ttm and abs(nonop) > 0.15 * abs(op_ttm)
+                      and (nonop > 0 or int_ttm is not None))
+    core_eps = core_pre * (1 - tax_r) / shares if (core_pre and shares) else None
     if nonop is not None:
-        print(f"Core earnings: op income TTM {bigm(op_ttm)} | pre-tax {bigm(pretax_ttm)} | non-operating {bigm(nonop)} "
+        print(f"Core earnings: op income TTM {bigm(op_ttm)} | interest {bigm(int_ttm) if int_ttm is not None else 'n/a (net expense assumed recurring)'} | "
+              f"pre-tax {bigm(pretax_ttm)} | non-operating ex-interest {bigm(nonop)} "
               f"({p(nonop / op_ttm if op_ttm else None, 0)} of op income) -> "
               f"{'NON-OP DISTORTION: GAAP EPS and EPS estimates include one-off marks' if nonop_flag else 'clean'} | "
-              f"core EPS = op income x (1 - {pa(tax_r)} [{tax_src}]) / shares = {m(core_eps)} vs GAAP TTM {m(eps_gaap_ttm)}")
+              f"core EPS = (op income - interest) x (1 - {pa(tax_r)} [{tax_src}]) / shares = {m(core_eps)} vs GAAP TTM {m(eps_gaap_ttm)}")
 
     # ---- 2. owner cash flow ----
     ocf, capex, qs, cf_note, da_ttm = cf_series(x.get("cf_q"), fy_end, x.get("cf_mode", "ytd"))
@@ -356,7 +363,10 @@ def valu(x):
     owner_norm = (ocf - sbc - da_ttm) if (ocf is not None and sbc is not None and da_ttm) else None
     epv = eq(owner_norm / r) if (owner_norm and owner_norm > 0 and not fin) else None
     ig_norm = implied_g(owner_norm, ev, r) if (owner_norm and owner_norm > 0 and not fin) else None
-    if owner_norm is not None and not fin and (capex_surge or not dcf_ok):
+    norm_on = owner_norm is not None and not fin and (capex_surge or not dcf_ok)
+    if not norm_on:
+        epv = ig_norm = None
+    if norm_on:
         print(f"Capex-normalized: CapEx {bigm(capex)} = {m(capex / da_ttm if da_ttm else None, 1)}x D&A {bigm(da_ttm)}"
               f"{' (SURGE > 2x)' if capex_surge else ''} | OCF - SBC - D&A = normalized owner FCF {bigm(owner_norm)} | "
               f"no-growth value (EPV = norm FCF / r + net cash) {m(epv)}/sh = SOFT floor | "

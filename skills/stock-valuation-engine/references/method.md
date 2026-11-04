@@ -31,7 +31,13 @@ Second ADBE run lesson: Zacks closed at $255.06 and spot was $268.52 (+5.3%). Re
 Dry-run lesson (ADBE, Oct 2026): the stock was −3.2% over 12 weeks while the S&P was +6.0% and peers +6.0%. The first version called that NO MAJOR MOVE; it was really a 9-point company-specific lag.
 
 ## v2: core earnings (why GAAP EPS is not used when non-op items are large)
-GAAP pre-tax income includes revaluations of equity stakes and investment gains. When those exceed 15% of operating income over 4 quarters, both trailing EPS and consensus F1 EPS are inflated (or deflated) by marks that will not recur. Core EPS = operating income × (1 − tax) ÷ shares. It excludes interest income on cash, which is conservative, because the cash is already in net cash. Peer forward P/E is applied to core TTM EPS (TTM is below forward, so this is conservative too), and EPS F1→F2 growth is dropped from base g because it compares a marked year with an unmarked one.
+GAAP pre-tax income includes revaluations of equity stakes and investment gains. When those exceed 15% of operating income over 4 quarters, both trailing EPS and consensus F1 EPS are inflated (or deflated) by marks that will not recur. Core EPS = (operating income − interest expense) × (1 − tax) ÷ shares. Interest expense stays in because it recurs: stripping it would make every leveraged company look cheaper (a test case with $200M/qtr interest went from $6.00 to $7.90 core EPS and +32% fair value before this fix). With interest unknown, only net *gains* are flagged.
+
+Two known biases, both conservative, to say out loud when they matter:
+- Core EPS leaves out interest *income* on cash, and the peer-P/E route values equity directly, so net cash is **not** added back on that route. A cash-rich name is understated by about net interest income × peer P/E (GOOG: roughly $7B a year, about $9–10/sh).
+- Peer *forward* P/E is applied to *trailing* core EPS, so a fast grower is understated by about one year of growth (GOOG's operating income grew +26% TTM). Peer forward P/E × core EPS × (1 + operating-income growth) is the upper bound; quote it in the reality check rather than in the table.
+
+EPS F1→F2 growth is dropped from base g because it compares a marked year with an unmarked one.
 
 GOOG lesson (Nov 2026): $130.7B of TTM non-operating gains (mostly the SpaceX mark) against $157.0B of operating income. v1 applied the peer P/E of 19.8x to F1 EPS of $19.80 (marks included) and got $393/sh, which put fair value at $306.53. On core EPS of $10.52 it is $209/sh, and fair value is $214.47.
 

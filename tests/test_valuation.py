@@ -50,3 +50,27 @@ def test_clean_name_unchanged():
          "peers": [{"t": "INTU", "pe_f1": 14.28, "ps": 4.18, "peg": 1.09, "chg4w": 17.02, "chg12w": 0.74}], "rf": 0.045}
     _, h = run(x)
     assert h["val_floor"] == 272.95 and h["val_fair"] == 390.56 and h["val_verdict"] == "AT FLOOR"
+
+
+def _leveraged(int_exp=None, pretax=800):
+    q = lambda e: {"end": e, "rev": 5000, "op_inc": 1000, "ni": 600, "eps": 1.5, "pretax": pretax, "tax": 168,
+                   **({} if int_exp is None else {"int_exp": int_exp})}
+    return {"ticker": "LEV", "asof": "2026-11-03", "spot": 60, "shares": 400, "fy_end": "2025-12-31", "cash": 500,
+            "debt": 20000, "sbc_ttm": 100, "cf_mode": "ytd",
+            "cf_q": [{"end": "2026-09-30", "ocf": 3000, "capex": -600, "da": 450}, {"end": "2026-06-30", "ocf": 2000, "capex": -400, "da": 300},
+                     {"end": "2026-03-31", "ocf": 1000, "capex": -200, "da": 150}, {"end": "2025-12-31", "ocf": 4000, "capex": -800, "da": 600},
+                     {"end": "2025-09-30", "ocf": 3000, "capex": -600, "da": 450}],
+            "is_q": [q("2026-09-30"), q("2026-06-30"), q("2026-03-31"), q("2025-12-31")],
+            "eps_f1": 6.0, "eps_f2": 6.6, "beta": 1.0, "peers": [{"t": "A", "pe_f1": 15, "ps": 2, "chg12w": 0}], "rf": 0.045}
+
+
+def test_interest_expense_is_not_a_one_off():
+    # interest unknown: a net non-op expense is treated as recurring, not stripped
+    _, h = run(_leveraged())
+    assert h["val_nonop_flag"] is False and h["val_soft_floor"] is None
+    # interest known and it explains the gap: clean
+    _, h = run(_leveraged(int_exp=200))
+    assert h["val_nonop_flag"] is False and h["val_core_eps"] == 6.32
+    # a one-off loss on top of interest still gets flagged
+    _, h = run(_leveraged(int_exp=200, pretax=600))
+    assert h["val_nonop_flag"] is True

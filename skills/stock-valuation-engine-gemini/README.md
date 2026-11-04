@@ -8,6 +8,7 @@ The same valuation method and output card as the Claude skill in [`../stock-valu
 3. Under **Knowledge**, upload:
    - [`../stock-valuation-engine/scripts/valuation.py`](../stock-valuation-engine/scripts/valuation.py) (the calculator; Gemini runs it when code execution is available)
    - [`../stock-valuation-engine/references/method.md`](../stock-valuation-engine/references/method.md) (why each rule exists, including the GOOG lessons)
+   - [`../stock-valuation-engine/SKILL.md`](../stock-valuation-engine/SKILL.md) (the calculator's JSON input keys)
 4. Run `VALU: TICKER` or `VALU DEEP: TICKER`.
 
 ## What changed from the old Gemini VALU (GOOG, Nov 3 2026 run)
