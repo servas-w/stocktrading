@@ -390,7 +390,8 @@ def valu(x):
     print(f"Reverse DCF: price implies {p(ig)} owner-FCF growth/yr for 5y (fading to {pa(GT)}) at r {pa(r)}; "
           f"{p(ig_up)} at r +1% | inputs: EPS F1->F2 {p((eps_f2 / eps_f1 - 1) if (eps_f1 and eps_f2 and eps_f1 > 0) else None)}, "
           f"TTM sales {p(ttm_sales_g)}{' (EPS leg dropped: non-op distortion)' if nonop_flag else ''}")
-    # capex-normalized lens: maintenance capex = D&A, growth capex excluded. No-growth value (EPV) is a SOFT floor.
+    # capex-normalized lens: maintenance capex = max(TTM D&A, run-rate D&A, PP&E / life); the rest is growth capex.
+    # No-growth value (EPV) is a SOFT floor.
     capex_surge = bool(da_ttm and capex is not None and capex > 2 * da_ttm)
     da_run = qs[0]["da"] * 4 if (qs and qs[0].get("da")) else None
     ppe, life = f(x.get("ppe_net")), f(x.get("ppe_life")) or 10.0
@@ -471,7 +472,7 @@ def valu(x):
     if fin and fair is None:
         fair = v_pe
     if not dcf_ok and not fin and fair is not None:
-        # no owner cash: peers plus own history on normalized FCF; P/S only breaks the tie
+        # no owner cash: peers plus own history on normalized FCF; margin-blind P/S is never the only comparable
         fair = median([v_pe, v_hmed_norm, v_ps] if v_hmed_norm else [v_pe, v_ps])
     mos = (fair / S - 1) if (fair and S) else None
     if fair is None or S is None:
@@ -480,7 +481,7 @@ def valu(x):
         rel = "UNDERVALUED" if S < fair * 0.85 else "RICH" if S > fair * 1.15 else "FAIRLY VALUED"
         if capex_surge and epv:
             v = (f"CAPEX-CYCLE ({rel} vs peers): owner FCF negative from growth capex - "
-                 f"fair from peer multiples, soft floor {m(epv)} (no-growth value)")
+                 f"fair from peers and normalized history, soft floor {m(epv)} (no-growth value)")
         else:
             v = "SPECULATIVE: no owner cash flow - value rests on peer multiples only"
     elif floor is not None and abs(S / floor - 1) <= 0.02:
