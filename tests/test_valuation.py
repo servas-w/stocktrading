@@ -85,8 +85,6 @@ def test_gemini_skill_copies_match_claude():
     for rel in ("scripts/valuation.py", "references/method.md"):
         assert (gem / rel).read_bytes() == (claude / rel).read_bytes(), f"{rel} drifted: copy it again"
     assert (gem / "references/test-case-goog.json").read_bytes() == GOOG.read_bytes()
-    for rel in ():
-        assert (gem / rel).read_bytes() == (claude / rel).read_bytes(), f"{rel} drifted: copy it again"
 
 
 def test_forward_core_eps_falls_back_to_growth_scaling():
