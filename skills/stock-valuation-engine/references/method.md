@@ -30,6 +30,15 @@ Second ADBE run lesson: Zacks closed at $255.06 and spot was $268.52 (+5.3%). Re
 
 Dry-run lesson (ADBE, Oct 2026): the stock was −3.2% over 12 weeks while the S&P was +6.0% and peers +6.0%. The first version called that NO MAJOR MOVE; it was really a 9-point company-specific lag.
 
+## GAAP distortion (GOOG lesson, Nov 2026)
+GOOG's Q1–Q2 2026 net income ($63B, $112B) ran 1.6x and 2.7x operating income on equity-stake gains; Q3 ($26B) ran 0.65x on a mark-down. F1 EPS ($19.80) carried the gains and F2 ($14.90) didn't, so the old peer value (19.8x peer F1 P/E × $19.80 = $392) inflated fair to $307.75 and showed +11% margin of safety. The F2 basis (19.6x peer F2 P/E × $14.90 = $292) brings comps-fair to $258, about 5% *below* spot. The beat/miss average went from +72.5% to +7.6% with the distorted quarters dropped. The reference ratio is the company's own median NI/op income, clamped to 0.6–1.0, so a levered filer with a normally low ratio isn't flagged.
+
+## Capex-adjusted read
+Owner FCF charges all CapEx. In a build-out (GOOG: $160B TTM capex against $28B D&A) that drives owner FCF below zero and the DCF has nothing to discount. The adjusted read uses D&A as maintenance capex: OCF − min(CapEx, D&A) − SBC. D&A lags a capex ramp, so this overstates sustainable cash. Treat it as the value *if the growth capex earns its keep*, never as a floor for LC. The history value also switches to OCF − D&A, so it mixes bases (the trough multiples were measured on full-capex FCF): one more reason it's an upper bound.
+
+## Cash
+Current investments: `MarketableSecuritiesCurrent` first (Alphabet, Apple and others tag it there), else `ShortTermInvestments`, else the AFS debt-securities tag. Missing them understated GOOG's cash by $209B and turned $139B of net cash into $70B of net debt.
+
 ## Known limits
 - Zacks quarterly cash flow is year-to-date; the calculator needs 5 quarterly rows to build TTM and 4 discrete quarters.
 - Past net debt isn't modeled; the history multiple is P/FCF (equity basis), not EV/FCF.
