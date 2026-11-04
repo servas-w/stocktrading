@@ -74,3 +74,10 @@ def test_interest_expense_is_not_a_one_off():
     # a one-off loss on top of interest still gets flagged
     _, h = run(_leveraged(int_exp=200, pretax=600))
     assert h["val_nonop_flag"] is True
+
+
+def test_gemini_skill_copies_match_claude():
+    gem = ROOT / "skills" / "stock-valuation-engine-gemini"
+    claude = ROOT / "skills" / "stock-valuation-engine"
+    for rel in ("scripts/valuation.py", "references/method.md"):
+        assert (gem / rel).read_bytes() == (claude / rel).read_bytes(), f"{rel} drifted: copy it again"

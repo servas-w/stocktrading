@@ -9,9 +9,9 @@ Price is what you pay; owner cash flow is what you get. Value the stock on OCF �
 
 Works alone (**VALU: TICKER**) or as the floor supplier for LC (**VALU LC: TICKER**, or when an LC underwrite's floor check hinges on valuation). It never sizes or recommends a trade; LC does that.
 
-The Gemini Gem in `skills/stock-valuation-engine-gemini/` runs the same method and prints the same card, so the two outputs can be compared line for line.
+The Gemini skill `stock-valuation-engine-gemini` (in `skills/stock-valuation-engine-gemini/`) runs the same method and prints the same card, so the two outputs can be compared line for line.
 
-## Hard rules (shared with the Gemini Gem)
+## Hard rules (shared with the Gemini skill)
 
 1. **SBC is subtracted once, from cash flow only.** Owner FCF = OCF − CapEx − SBC, because OCF adds SBC back. Operating income, EBIT, NOPAT and EPS already expense SBC: never subtract it from them again.
 2. **Core earnings for multiples.** Core pre-tax = operating income − interest expense (interest is recurring and stays in). When the rest of the non-operating line (pre-tax − core pre-tax) exceeds 15% of operating income over 4 quarters, GAAP EPS and consensus EPS carry one-off marks (equity-stake revaluations, investment gains, impairments). Peer P/E then uses core EPS = core pre-tax × (1 − tax rate) ÷ shares, and the EPS F1→F2 growth leg is dropped from base growth. If interest is unknown, only net non-operating *gains* are flagged; a net expense is assumed to be interest. The calculator does this when `pretax` and `tax` (and ideally `int_exp`) are in `is_q`.

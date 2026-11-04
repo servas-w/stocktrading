@@ -66,3 +66,8 @@ watchlist_bot/
 ## Tuning
 - Edit the weights in `watchlist_bot/materiality.py`. Scoring takes the strongest signal and adds +1 for each extra distinct category.
 - `LOOKBACK_HOURS` (default 36) sets how far back each run looks. Items already sent are skipped.
+
+## VALU v2 valuation skill (Claude and Gemini)
+- **Claude:** `skills/stock-valuation-engine/` (upload `skills/stock-valuation-engine.zip` on claude.ai).
+- **Gemini:** `skills/stock-valuation-engine-gemini/` is a Gemini skill (Gems become skills from Nov 2026). In the Gemini web or Mac app: **Settings → Skills → Upload**, and upload the whole folder (or `skills/stock-valuation-engine-gemini.zip`). The folder name must stay `stock-valuation-engine-gemini`, matching the skill name.
+- Both print the same card and `VALU_HANDOFF` line. `scripts/valuation.py` and `references/method.md` are shared; a test fails if the Gemini copies drift from the Claude ones.
