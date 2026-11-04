@@ -110,3 +110,13 @@ def test_capex_surge_with_positive_owner_fcf_shows_normalized_lens():
     out, h = run(x)
     assert "SURGE > 2x" in out and h["val_soft_floor"] is not None
     assert not h["val_verdict"].startswith("CAPEX-CYCLE")   # owner FCF > 0: normal verdict ladder
+
+
+def test_skill_frontmatter_within_upload_limits():
+    import re
+    for folder in ("stock-valuation-engine", "stock-valuation-engine-gemini"):
+        text = (ROOT / "skills" / folder / "SKILL.md").read_text()
+        desc = re.search(r'^description: "?(.*?)"?$', text, re.M).group(1)
+        name = re.search(r'^name: "?(.*?)"?$', text, re.M).group(1)
+        assert len(desc) <= 1024, f"{folder}: description is {len(desc)} chars (max 1024)"
+        assert name == folder, f"{folder}: skill name must match its folder"
