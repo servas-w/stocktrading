@@ -33,24 +33,34 @@ Dry-run lesson (ADBE, Oct 2026): the stock was −3.2% over 12 weeks while the S
 ## v2: core earnings (why GAAP EPS is not used when non-op items are large)
 GAAP pre-tax income includes revaluations of equity stakes and investment gains. When those exceed 15% of operating income over 4 quarters, both trailing EPS and consensus F1 EPS are inflated (or deflated) by marks that will not recur. Core EPS = (operating income − interest expense) × (1 − tax) ÷ shares. Interest expense stays in because it recurs: stripping it would make every leveraged company look cheaper (a test case with $200M/qtr interest went from $6.00 to $7.90 core EPS and +32% fair value before this fix). With interest unknown, only net *gains* are flagged.
 
-Two known biases, both conservative, to say out loud when they matter:
-- Core EPS leaves out interest *income* on cash, and the peer-P/E route values equity directly, so net cash is **not** added back on that route. A cash-rich name is understated by about net interest income × peer P/E (GOOG: roughly $7B a year, about $9–10/sh).
-- Peer *forward* P/E is applied to *trailing* core EPS, so a fast grower is understated by about one year of growth (GOOG's operating income grew +26% TTM). Peer forward P/E × core EPS × (1 + operating-income growth) is the upper bound; quote it in the reality check rather than in the table.
+**Forward core EPS (matches the peers' forward P/E).** Peer `pe_f1` is price ÷ current-fiscal-year EPS, so it has to be applied to a current-fiscal-year core EPS, not a trailing one:
+- (a) **preferred:** consensus F1 minus the one-off marks already booked in this fiscal year (pre-tax − (operating income − interest) for each quarter after the last FY end), after tax. Analysts don't forecast marks, so what's left is the core forecast. Used when it lands within 0.7–1.6× core TTM EPS.
+- (b) **fallback:** core TTM EPS × (1 + TTM operating-income growth, clamped −20%/+30%)^(months left to FY end ÷ 12).
+- (c) core TTM EPS when neither is available (conservative, labelled).
+The first v2 draft used core TTM EPS and called the gap "about a year of growth". That overstated it: the gap is only the months left in the fiscal year (3 for GOOG in November), so the fix moves GOOG's core EPS from $10.52 to $11.26 (a) or $11.15 (b), not to ~$13.
+
+**Net cash on the core route.** Core EPS excludes interest income, and the P/E route values equity directly, so positive net cash per share is added back to the peer-P/E value on the core route. Net debt is not subtracted, because interest expense is already inside core earnings. On GOOG this adds $11.36/sh. It also counts the SpaceX stake once, at its balance-sheet mark, instead of through the gains.
+
+**Leave-one-peer-out range.** With 3+ peers the calculator reprints the peer-P/E value dropping each peer in turn. A wide range means one peer drives the answer (e.g. ORCL after a −54% year); say so.
 
 EPS F1→F2 growth is dropped from base g because it compares a marked year with an unmarked one.
 
-GOOG lesson (Nov 2026): $130.7B of TTM non-operating gains (mostly the SpaceX mark) against $157.0B of operating income. v1 applied the peer P/E of 19.8x to F1 EPS of $19.80 (marks included) and got $393/sh, which put fair value at $306.53. On core EPS of $10.52 it is $209/sh, and fair value is $214.47.
+GOOG lesson (Nov 2026): $130.7B of TTM non-operating gains (mostly the SpaceX mark) against $157.0B of operating income. v1 applied the peer P/E of 19.8x to F1 EPS of $19.80 (marks included) and got $393/sh, which put fair value at $306.53. With forward core EPS of $11.26 plus $11.36 of net cash, the peer value is $234.68 (range $225.73–$243.64 dropping one peer at a time). Fair value is $220.33.
 
 ## v2: SBC is subtracted once
 OCF adds SBC back, so owner FCF subtracts it. Operating income already expenses SBC; subtracting it again from NOPAT counts it twice. (A Gemini VALU run did this and called GOOG "33.7–35x core owner NOPAT"; the correct figure was 25.7–26.8x.)
 
 ## v2: capex-normalized lens and the soft floor
 A hyperscaler-style build-out can push CapEx well above D&A and owner FCF below zero, even when the operating business is strong. v1 then had nothing to discount and returned SPECULATIVE. v2 adds Greenwald's earnings-power view:
-- maintenance capex ≈ D&A (the cost of standing still); everything above it is growth capex
-- normalized owner FCF = OCF − SBC − D&A
+- maintenance capex = the largest of TTM D&A, run-rate D&A (latest quarter × 4) and, when `ppe_net` is passed, net PP&E ÷ `ppe_life` (default 10 years). Everything above it is growth capex. Run-rate D&A matters in a build-out: depreciation lags capex, so TTM D&A understates what standing still will cost (GOOG: $33.5B run-rate vs $28.0B TTM). Net PP&E ÷ life is the stricter test: what depreciation will be once today's asset base is in service
+- normalized owner FCF = OCF − SBC − maintenance capex
 - EPV = normalized owner FCF ÷ r + net cash: the value with zero growth. Every dollar of price above EPV is paid for growth
 - the reverse DCF on normalized FCF says how much growth that is
 EPV is a **soft floor**: it is not the bear case of a cash flow that exists today, so it never becomes `val_floor` and LC never anchors a strike on it. Growth must be paid for: a forward DCF on normalized FCF at the sales growth rate would count growth without paying for its capex, so v2 does not run one.
+
+**Own history on normalized FCF.** The history P/FCF multiples were struck in years of normal capex, so in a capex surge they are applied to normalized FCF (OCF − maintenance capex) instead of today's depressed FCF. That gives a third, independent leg:
+- owner FCF ≤ 0 (CAPEX-CYCLE): fair = median(peer P/E value, history × normalized FCF, P/S value). P/S ignores margins (AMZN ~10%, GOOG ~33%), so it is never the only comparable; in a median of three it can't pull the answer outside the other two.
+- owner FCF > 0 but squeezed (capex > 2× D&A, e.g. META or MSFT mid build-out): the floor still uses the real owner FCF (conservative), but fair = median(base DCF, history × normalized FCF, peer P/E value), and the normalized line and soft floor print alongside.
 
 ## v2: no hand-typed FCF paths
 A model that writes "−$50B → +$7B → +$74B → +$131B → +$178B" has decided the answer in the forecast. About 90% of the resulting value sits in terminal value, and each ±$20B on the last year moves value by about ±$18/sh (GOOG). VALU keeps one DCF shape for every stock and lets only g and r move, by rule.
@@ -63,4 +73,5 @@ Net cash = cash + current marketable investments − debt. Long-term and private
 - Past net debt isn't modeled; the history multiple is P/FCF (equity basis), not EV/FCF.
 - Highly cyclical names (energy, materials, autos): trough FCF years can make P/FCF meaningless; lean on the peer and bear-DCF values and say so.
 - Banks and insurers: P/E only. Pre-revenue or clinical-stage names: out of scope.
-- D&A as maintenance capex understates true maintenance when the asset base is young and growing fast (depreciation lags capex), so EPV is generous early in a build-out and conservative late in one.
+- Maintenance capex is still an estimate: run-rate D&A lags in a fast build-out, and net PP&E ÷ life depends on the life you pick (servers ~6 years, buildings 25+, land never). Pass `ppe_net` and a realistic `ppe_life` when the soft floor matters.
+- Consensus F1 minus booked marks assumes analysts forecast no further marks for the rest of the year. If F1 drops by more than the marks booked (revisions), method (b) is the cross-check.

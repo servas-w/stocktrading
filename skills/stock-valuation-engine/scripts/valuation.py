@@ -230,7 +230,8 @@ def valu(x):
         dlt = known[-1] - known[0]
         trend = ("SHRINKING" if known[-1] < 0 else
                  "ACCELERATING" if dlt > 0.02 else "DECELERATING" if dlt < -0.02 else "STEADY")
-    isq = sorted((r for r in (x.get("is_q") or []) if d(r.get("end"))), key=lambda r: d(r["end"]))[-4:]
+    allq = sorted((r for r in (x.get("is_q") or []) if d(r.get("end"))), key=lambda r: d(r["end"]))
+    isq = allq[-4:]
     ni_ttm = sum(f(r.get("ni")) for r in isq) if len(isq) == 4 and all(f(r.get("ni")) is not None for r in isq) else None
     eps_gaap_ttm = sum(f(r.get("eps")) for r in isq) if len(isq) == 4 and all(f(r.get("eps")) is not None for r in isq) else None
     eps_adj_ttm = sum(eps_q[-4:]) if len(eps_q) >= 4 and None not in eps_q[-4:] else None
@@ -260,12 +261,43 @@ def valu(x):
     nonop_flag = bool(nonop is not None and op_ttm and abs(nonop) > 0.15 * abs(op_ttm)
                       and (nonop > 0 or int_ttm is not None))
     core_eps = core_pre * (1 - tax_r) / shares if (core_pre and shares) else None
+    # forward core EPS, to match peers' forward (current-FY) P/E:
+    #  (a) consensus F1 minus the one-off marks already booked this fiscal year (after tax), else
+    #  (b) core TTM EPS grown by TTM operating-income growth for the months left until FY end
+    eps_f1 = f(x.get("eps_f1"))
+    prevq = allq[-8:-4]
+    op_prev = sum(f(r.get("op_inc")) for r in prevq) if len(prevq) == 4 and all(f(r.get("op_inc")) is not None for r in prevq) else None
+    g_op = max(-0.20, min(0.30, op_ttm / op_prev - 1)) if (op_ttm and op_prev and op_prev > 0) else None
+    lastq = d(isq[-1]["end"]) if isq else None
+    fy1_end = None
+    if fy_end and lastq:
+        fy1_end = fy_end
+        while months(fy1_end, lastq) > 0:
+            fy1_end = date(fy1_end.year + 1, fy1_end.month, min(fy1_end.day, 28))
+    m_left = months(lastq, fy1_end) if (lastq and fy1_end) else None
+    core_f1, core_f1_src = None, "n/a"
+    if core_eps and core_eps > 0:
+        ytd = [r for r in isq if fy_end and d(r["end"]) > fy_end]
+        ytd_marks = None
+        if ytd and all(f(r.get("pretax")) is not None and f(r.get("op_inc")) is not None for r in ytd):
+            ytd_marks = sum(f(r.get("pretax")) - (f(r.get("op_inc")) - abs(f(r.get("int_exp")) or 0)) for r in ytd)
+        elif fy_end and lastq and not ytd:
+            ytd_marks = 0.0  # new fiscal year, nothing booked yet
+        a = (eps_f1 - ytd_marks * (1 - tax_r) / shares) if (eps_f1 and ytd_marks is not None and shares) else None
+        b = core_eps * (1 + g_op) ** (m_left / 12.0) if (g_op is not None and m_left is not None) else None
+        if a and a > 0 and 0.7 <= a / core_eps <= 1.6:
+            core_f1, core_f1_src = a, f"consensus F1 {m(eps_f1)} minus {bigm(ytd_marks)} of FY-to-date marks after tax"
+        elif b:
+            core_f1, core_f1_src = b, f"core TTM x (1 {p(g_op, 0)} op-income growth)^({m_left}/12)"
+        else:
+            core_f1, core_f1_src = core_eps, "core TTM (no growth data: conservative)"
     if nonop is not None:
         print(f"Core earnings: op income TTM {bigm(op_ttm)} | interest {bigm(int_ttm) if int_ttm is not None else 'n/a (net expense assumed recurring)'} | "
               f"pre-tax {bigm(pretax_ttm)} | non-operating ex-interest {bigm(nonop)} "
               f"({p(nonop / op_ttm if op_ttm else None, 0)} of op income) -> "
               f"{'NON-OP DISTORTION: GAAP EPS and EPS estimates include one-off marks' if nonop_flag else 'clean'} | "
-              f"core EPS = (op income - interest) x (1 - {pa(tax_r)} [{tax_src}]) / shares = {m(core_eps)} vs GAAP TTM {m(eps_gaap_ttm)}")
+              f"core EPS = (op income - interest) x (1 - {pa(tax_r)} [{tax_src}]) / shares = {m(core_eps)} vs GAAP TTM {m(eps_gaap_ttm)}"
+              + (f" | forward core EPS {m(core_f1)} ({core_f1_src})" if nonop_flag else ""))
 
     # ---- 2. owner cash flow ----
     ocf, capex, qs, cf_note, da_ttm = cf_series(x.get("cf_q"), fy_end, x.get("cf_mode", "ytd"))
@@ -330,7 +362,7 @@ def valu(x):
     if debt is None or cash is None:
         unver.append("cash/debt")
     eq = (lambda e: (e - (debt or 0) + (cash or 0)) / shares if (e is not None and shares) else None)
-    eps_f1, eps_f2 = f(x.get("eps_f1")), f(x.get("eps_f2"))
+    eps_f2 = f(x.get("eps_f2"))
     eps_g = (eps_f2 / eps_f1 - 1) if (eps_f1 and eps_f2 and eps_f1 > 0) else None
     cands = [v for v in ((None if nonop_flag else eps_g), ttm_sales_g) if v is not None]
     gin = x.get("g") or {}
@@ -360,7 +392,12 @@ def valu(x):
           f"TTM sales {p(ttm_sales_g)}{' (EPS leg dropped: non-op distortion)' if nonop_flag else ''}")
     # capex-normalized lens: maintenance capex = D&A, growth capex excluded. No-growth value (EPV) is a SOFT floor.
     capex_surge = bool(da_ttm and capex is not None and capex > 2 * da_ttm)
-    owner_norm = (ocf - sbc - da_ttm) if (ocf is not None and sbc is not None and da_ttm) else None
+    da_run = qs[0]["da"] * 4 if (qs and qs[0].get("da")) else None
+    ppe, life = f(x.get("ppe_net")), f(x.get("ppe_life")) or 10.0
+    maint_c = [("TTM D&A", da_ttm), ("run-rate D&A (last qtr x4)", da_run), (f"net PP&E / {life:.0f}y", ppe / life if ppe else None)]
+    maint_src, maint = max(((k, v) for k, v in maint_c if v), key=lambda kv: kv[1], default=(None, None))
+    owner_norm = (ocf - sbc - maint) if (ocf is not None and sbc is not None and maint) else None
+    fcf_norm = (ocf - maint) if (ocf is not None and maint) else None
     epv = eq(owner_norm / r) if (owner_norm and owner_norm > 0 and not fin) else None
     ig_norm = implied_g(owner_norm, ev, r) if (owner_norm and owner_norm > 0 and not fin) else None
     norm_on = owner_norm is not None and not fin and (capex_surge or not dcf_ok)
@@ -368,7 +405,8 @@ def valu(x):
         epv = ig_norm = None
     if norm_on:
         print(f"Capex-normalized: CapEx {bigm(capex)} = {m(capex / da_ttm if da_ttm else None, 1)}x D&A {bigm(da_ttm)}"
-              f"{' (SURGE > 2x)' if capex_surge else ''} | OCF - SBC - D&A = normalized owner FCF {bigm(owner_norm)} | "
+              f"{' (SURGE > 2x)' if capex_surge else ''} | maintenance capex = {maint_src} {bigm(maint)} | "
+              f"OCF - SBC - maintenance = normalized owner FCF {bigm(owner_norm)} | "
               f"no-growth value (EPV = norm FCF / r + net cash) {m(epv)}/sh = SOFT floor | "
               f"price implies {p(ig_norm)} normalized growth/yr for 5y")
     print(f"DCF/sh: bear {m(v_bear)} (g {p(g_bear)}, r {pa(r + 0.01)}) | base {m(v_base)} (g {p(g_base)}) | "
@@ -396,23 +434,32 @@ def valu(x):
     powner = mcap / owner if (mcap and owner and owner > 0) else None
     v_trough = trough * owner / shares if (trough and owner and owner > 0 and shares) else None
     v_hmed = hmed * fcf / shares if (hmed and fcf and fcf > 0 and shares) else None
+    v_hmed_norm = hmed * fcf_norm / shares if (hmed and fcf_norm and fcf_norm > 0 and shares and norm_on) else None
     print(f"Own history ({len(hist)} FY): P/FCF at yearly lows {' / '.join(f'{e.year} {v:.1f}x' for e, v in hist) or 'n/a'} | "
           f"trough {m(trough, 1)}x median {m(hmed, 1)}x | now P/FCF {m(pfcf, 1)}x P/owner-FCF {m(powner, 1)}x | "
-          f"trough x owner FCF = {m(v_trough)}/sh | median x FCF = {m(v_hmed)}/sh")
+          f"trough x owner FCF = {m(v_trough)}/sh | median x FCF = {m(v_hmed)}/sh"
+          + (f" | median x normalized FCF {bigm(fcf_norm)} = {m(v_hmed_norm)}/sh" if v_hmed_norm else ""))
 
     # peers
     pe_med = median([f(q.get("pe_f1")) for q in peers if (f(q.get("pe_f1")) or 0) > 0])
     ps_med = median([f(q.get("ps")) for q in peers if (f(q.get("ps")) or 0) > 0])
     peg_med = median([f(q.get("peg")) for q in peers if (f(q.get("peg")) or 0) > 0])
-    pe_eps = core_eps if nonop_flag else eps_f1
-    v_pe = pe_med * pe_eps if (pe_med and pe_eps and pe_eps > 0) else None
+    pe_eps = core_f1 if nonop_flag else eps_f1
+    # core EPS excludes interest income, so positive net cash is added back on that route (debt is already in via interest)
+    nc_add = ((cash or 0) - (debt or 0)) / shares if (nonop_flag and shares and (cash or 0) > (debt or 0)) else 0.0
+    pe_val = lambda med: (med * pe_eps + nc_add) if (med and pe_eps and pe_eps > 0) else None
+    v_pe = pe_val(pe_med)
+    pes = [f(q.get("pe_f1")) for q in peers]
+    loo = [pe_val(median([v for j, v in enumerate(pes) if j != i and (v or 0) > 0])) for i in range(len(pes))] if len(pes) >= 3 else []
+    loo = [v for v in loo if v is not None]
     v_ps = ps_med * sales_ttm / shares if (ps_med and sales_ttm and shares) else None
     t_pe = S / pe_eps if (S and pe_eps and pe_eps > 0) else None
     t_ps = mcap / sales_ttm if (mcap and sales_ttm) else None
     print(f"Peers ({', '.join(str(q.get('t')) for q in peers) or 'none'}): fwd P/E med {m(pe_med, 1)}x vs {m(t_pe, 1)}x "
           f"({p((t_pe / pe_med - 1) if (t_pe and pe_med) else None, 0)}) | P/S med {m(ps_med, 1)}x vs {m(t_ps, 1)}x | "
           f"PEG med {m(peg_med)} vs {m(f(x.get('peg')))} | implied/sh: "
-          f"{'peer fwd P/E x core TTM EPS' if nonop_flag else 'fwd P/E'} {m(v_pe)} | P/S {m(v_ps)}")
+          f"{'peer fwd P/E x forward core EPS + net cash ' + m(nc_add) + '/sh' if nonop_flag else 'fwd P/E'} {m(v_pe)}"
+          f"{' (leave-one-peer-out ' + m(min(loo)) + '-' + m(max(loo)) + ')' if loo else ''} | P/S {m(v_ps)} (margin-blind)")
     if not peers:
         unver.append("peers")
 
@@ -420,11 +467,12 @@ def valu(x):
     floor = min([v for v in (v_bear, v_trough) if v is not None], default=None)
     if fin:
         floor = None
-    fair = median([v_base, v_hmed, v_pe])
+    fair = median([v_base, v_hmed_norm if (capex_surge and v_hmed_norm) else v_hmed, v_pe])
     if fin and fair is None:
         fair = v_pe
     if not dcf_ok and not fin and fair is not None:
-        fair = median([v_pe, v_ps])  # no owner cash: only market comparables left
+        # no owner cash: peers plus own history on normalized FCF; P/S only breaks the tie
+        fair = median([v_pe, v_hmed_norm, v_ps] if v_hmed_norm else [v_pe, v_ps])
     mos = (fair / S - 1) if (fair and S) else None
     if fair is None or S is None:
         v = "INCOMPLETE: fair value needs owner FCF, peers or estimates"
@@ -455,7 +503,9 @@ def valu(x):
             "val_r": round(r, 4), "val_trough_pfcf": None if trough is None else round(trough, 1),
             "val_soft_floor": None if epv is None else round(epv, 2),
             "val_implied_g_norm": None if ig_norm is None else round(ig_norm, 4),
-            "val_core_eps": None if core_eps is None else round(core_eps, 2), "val_nonop_flag": nonop_flag,
+            "val_core_eps": None if core_eps is None else round(core_eps, 2),
+            "val_core_eps_f1": None if (core_f1 is None or not nonop_flag) else round(core_f1, 2), "val_nonop_flag": nonop_flag,
+            "val_pe_range": [round(min(loo), 2), round(max(loo), 2)] if loo else None,
             "val_move": cls, "val_trend": trend, "val_verdict": v.split(":")[0]}
     print("VALU_HANDOFF " + json.dumps(hand))
 

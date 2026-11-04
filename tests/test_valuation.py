@@ -20,8 +20,11 @@ def test_goog_core_eps_and_capex_cycle():
     out, h = run(str(GOOG))
     assert h["val_nonop_flag"] is True
     assert h["val_core_eps"] == 10.52
-    assert h["val_fair"] == 214.47          # v1 gave 306.53 off mark-inflated F1 EPS
-    assert h["val_soft_floor"] == 105.26
+    assert h["val_core_eps_f1"] == 11.26    # consensus F1 19.80 minus FY-to-date marks after tax
+    assert h["val_fair"] == 220.33          # v1 gave 306.53 off mark-inflated F1 EPS
+    assert h["val_pe_range"] == [225.73, 243.64]
+    assert h["val_soft_floor"] == 101.01    # maintenance = run-rate D&A $33.5B, not TTM $28.0B
+    assert "net cash 11.36/sh" in out and "median x normalized FCF" in out
     assert h["val_floor"] is None           # soft floor never becomes the hard floor
     assert h["val_verdict"].startswith("CAPEX-CYCLE")
     assert "EPS leg dropped" in out
@@ -81,3 +84,31 @@ def test_gemini_skill_copies_match_claude():
     claude = ROOT / "skills" / "stock-valuation-engine"
     for rel in ("scripts/valuation.py", "references/method.md"):
         assert (gem / rel).read_bytes() == (claude / rel).read_bytes(), f"{rel} drifted: copy it again"
+    assert (gem / "references/test-case-goog.json").read_bytes() == GOOG.read_bytes()
+    for rel in ():
+        assert (gem / rel).read_bytes() == (claude / rel).read_bytes(), f"{rel} drifted: copy it again"
+
+
+def test_forward_core_eps_falls_back_to_growth_scaling():
+    x = json.loads(GOOG.read_text())
+    x.pop("eps_f1")
+    out, h = run(x)
+    assert "core TTM x (1 +27% op-income growth)^(3/12)" in out
+    assert h["val_core_eps_f1"] == 11.15
+
+
+def test_ppe_life_raises_maintenance_capex():
+    x = json.loads(GOOG.read_text())
+    x["ppe_net"], x["ppe_life"] = 372827, 8
+    out, h = run(x)
+    assert "maintenance capex = net PP&E / 8y" in out
+    assert h["val_soft_floor"] < 101.01
+
+
+def test_capex_surge_with_positive_owner_fcf_shows_normalized_lens():
+    x = _leveraged(int_exp=200)
+    for r in x["cf_q"]:
+        r["capex"] = -r["da"] * 3          # capex 3x D&A, owner FCF still positive
+    out, h = run(x)
+    assert "SURGE > 2x" in out and h["val_soft_floor"] is not None
+    assert not h["val_verdict"].startswith("CAPEX-CYCLE")   # owner FCF > 0: normal verdict ladder

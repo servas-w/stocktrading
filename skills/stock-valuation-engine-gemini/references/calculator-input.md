@@ -45,14 +45,14 @@ Money is in **$ millions**, shares in **millions**, prices and EPS per share. Ra
 | `peers` | 4 peers: `t`, `pe_f1`, `ps`, `peg`, `chg4w`, `chg12w` |
 | `rf` | 10-year Treasury yield; omit and 4.5% is used and labelled ASSUMED |
 
-Optional: `"erp"` (default 0.05), `"tax_rate"` (used when `tax` is missing), `"g":{"bear","base","bull"}` growth overrides as decimals, `"mcap"` + `"mcap_px"` instead of `shares`, `"financial": true` for banks and insurers (peer P/E only, no floor).
+Optional: `"ppe_net"` (net PP&E) with `"ppe_life"` (years, default 10) for a stricter maintenance-capex estimate, `"erp"` (default 0.05), `"tax_rate"` (used when `tax` is missing), `"g":{"bear","base","bull"}` growth overrides as decimals, `"mcap"` + `"mcap_px"` instead of `shares`, `"financial": true` for banks and insurers (peer P/E only, no floor).
 
 ## Output lines (what each one means)
 - **Earnings:** beats out of 4, average surprise, sales and adjusted-EPS YoY for the last 4 quarters with the trend label, operating margins.
-- **Core earnings:** operating income, interest, pre-tax, non-operating ex-interest as a % of operating income, NON-OP DISTORTION or clean, core EPS vs GAAP EPS.
+- **Core earnings:** operating income, interest, pre-tax, non-operating ex-interest as a % of operating income, NON-OP DISTORTION or clean, core TTM EPS vs GAAP EPS, and (when flagged) forward core EPS with how it was built.
 - **Owner cash:** OCF − CapEx − SBC = owner FCF, how TTM was built, SBC/OCF, owner FCF ÷ GAAP net income, and the de-cumulated quarters.
 - **Market:** beta, 12-week stock / S&P / peer-median moves, market-explained vs residual, the classification.
 - **Rates / Reverse DCF / DCF/sh:** discount rate, +100bp sensitivity, implied growth, bear/base/bull values.
-- **Capex-normalized** (only in a capex surge or with negative owner FCF): CapEx ÷ D&A, normalized owner FCF, EPV soft floor, implied normalized growth.
-- **Own history, Peers:** trough and median P/FCF, peer P/E (core if flagged) and P/S values.
+- **Capex-normalized** (only in a capex surge or with negative owner FCF): CapEx ÷ D&A, the maintenance-capex basis, normalized owner FCF, EPV soft floor, implied normalized growth.
+- **Own history, Peers:** trough and median P/FCF (and the median applied to normalized FCF in a surge), peer P/E value (forward core EPS + net cash if flagged) with its leave-one-out range, P/S value.
 - **Range, VERDICT, VALU_HANDOFF:** floor, fair, bull, margin of safety, the verdict, and the one-line JSON for LC. Copy these into the card; never paste the raw output.
