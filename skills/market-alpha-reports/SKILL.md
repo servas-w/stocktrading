@@ -33,7 +33,7 @@ Four reports, one skill. Each mode has its own job and template. The rules share
 | Class and Floor B | The CLASS and Floor B columns in the WarRoom PDF appendix. Name missing: Robinhood `get_equity_fundamentals` (market cap, sector) and the auto rule in `playbook.md`, tagged `class (auto)`. Floor B missing: `Floor B UNVERIFIED`. |
 | Indices, VIX, futures | Robinhood `get_index_quotes` (SPX, NDX, VIX, VIX1D, VXN where offered). RUT if restricted: IWM, labelled proxy. Futures: IBKR `get_price_snapshot` (ES, NQ, YM, RTY front month). |
 | Yields | Alpha Vantage `TREASURY_YIELD` (maturity 2year, 10year, 30year; daily close). Intraday: a timestamped page, else the daily close labelled `(close)`. |
-| DXY, FX | DXY: IBKR `get_price_snapshot` on the front DX future, labelled `DX future`; else Alpha Vantage `DX`; else N/A (Twelve Data has no indices). EUR/USD, USD/JPY: Twelve Data `get_quote`. |
+| DXY, FX | DXY: IBKR `get_price_snapshot` on the front DX future, labelled `DX future`; else Robinhood quote on UUP, labelled `ETF proxy`; else N/A (Twelve Data has no indices). EUR/USD, USD/JPY: Twelve Data `get_quote`. |
 | Commodities | Alpha Vantage `BRENT`, `WTI`, `GOLD_SILVER_SPOT`; Twelve Data for intraday marks |
 | Crypto | Robinhood `get_crypto_quotes` (BTC-USD, ETH-USD) |
 | Credit | Robinhood quotes on HYG and LQD, labelled `ETF proxy` |

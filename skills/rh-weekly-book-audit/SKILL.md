@@ -44,7 +44,7 @@ Credit, cushion at entry vs now, delta, DTE, IV gate status, % of credit capture
 `get_portfolio`, `get_equity_positions`, `get_option_positions` (nonzero, all pages; strip trailing digits). **Start of week** = current book minus the week's opens, with the week's closes added back; price shares with `get_equity_historicals` and options with `get_option_historicals` at the start-of-week close (credit at entry if no history).
 - % NAV by name and theme, net delta $, theta/day, vega, cash/BP %, **drift** (what grew, what shrank).
 - 10% NAV cap: amber >= 8%, red > 10%.
-- **Expiry ladder** (notional and premium by week/month), **earnings clusters** (notional exposed per week), **stress table**: the five S1-S5 scenarios below (the weekend market report copies them, so use exactly these).
+- **Expiry ladder** (notional and premium by week/month), **earnings clusters** (notional exposed per week), **stress table**: the five S1-S5 scenarios from the Definitions (the weekend market report copies them, so use exactly these).
 - Danger legs, short stock, naked calls/unlimited risk, < 21 DTE legs and velocity profit-takes called out.
 
 **Step 6: Held-lot review**
@@ -63,7 +63,7 @@ The Drive connector cannot edit a file's content, so these are snapshot files, l
 - Each run: match journal lines by ticker/strike/expiry to each new position and show **"Your thesis"** next to the outcome (held, wrong, or never written: then ask for a one-liner and offer to log it). Flip matched `status: considered` lines to `filled` (or `expired-unfilled` when the order never filled). Then add one scoreboard row (`type` = weekly).
 
 **Appendix: data for the weekend market report (always include, after the narrative)**
-Plain tables, 7 pt, one row per line, no merged cells, ASCII; it uses data already pulled. Gemini and Claude's weekend report read only this, so print every row:
+Plain tables, 7 pt, one row per line, no merged cells, ASCII; it uses data already pulled. The weekend market report reads only this, so print every row:
 - **A1 Header:** account · run type WEEKBOOK · run time `HH:MM ET / HH:MM ICT` · week (Mon-Fri session dates). Then, on its own line: `CHECK: <N> short option lines · <M> stock lines · $<X> short-put notional` (N = short rows in A4).
 - **A2 Snapshot:** NAV · cash · buying power · short put notional · net delta $ · theta $/day · vega $/pt.
 - **A3 Stock positions** and **A4 Option positions**: same columns as the daily audit's A3/A4 (class, Floor B or `n/a`, exact strike from `get_option_instruments`; `strike inferred` if not).
@@ -79,7 +79,7 @@ Every run saves its report as a PDF in the Google Drive folder **Robinhood Portf
 - PDF header, same as the other WarRoom reports: line 1 `<report title> - US session YYYY-MM-DD`; line 2 `Account ...6081 | Run: <UTC time> (<Da Nang time>) | Read-only: no orders placed, modified or cancelled.` Last section **UNVERIFIED**: everything not pulled or not sourced (IVR, tentative earnings dates, stale quotes, bad greeks).
 - End the chat reply with the file name and link. If the Drive connector is off, say so in one line and give the chat report only.
 
-**Sleep-at-night score (0-10, 10 = sleeps fine)**: start at 10. Subtract, with each category capped so one problem can't zero the score: names over 8% NAV, 1 each or 2 if over 10% (max 3); danger legs, 1 each (max 3); 1 if any danger leg is also <= 21 DTE; 1 if short stock or a naked call is open; 1 if the -20% stress costs > 5% NAV; 1 if cash+BP < 20% NAV; 1 if > 40% NAV sits in one theme. Floor 0. Show the raw count behind each capped category (e.g. "danger legs: 38, -3"). Show the score with the 2-3 biggest deductions and the single fix that adds the most points.
+**Sleep-at-night score (0-10, 10 = sleeps fine)**: start at 10. Subtract, with each category capped so one problem can't zero the score: names over 8% NAV, 1 each or 2 if over 10% (max 3); danger legs, 1 each (max 3); 1 if any danger leg is also <= 21 DTE; 1 if short stock or a naked call is open; 1 if S1 costs > 5% NAV; 1 if cash+BP < 20% NAV; 1 if > 40% NAV sits in one theme. Floor 0. Show the raw count behind each capped category (e.g. "danger legs: 38, -3"). Show the score with the 2-3 biggest deductions and the single fix that adds the most points.
 
 **Output (chat), in this order**
 1. Headline, one punchy line: week grade, trades opened, premium sold, week P&L, biggest concentration.
