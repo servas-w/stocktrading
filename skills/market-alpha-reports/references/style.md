@@ -32,7 +32,7 @@ Wilson reads these at night in Da Nang, often on a phone. The reading sections (
 ## Summary example (Section 1)
 > **Wed Nov 4 · After-Hours**
 > **Market:** Big rally, oil −8%. Your puts mostly gained.
-> **Book:** NAV $350K (+3% vs QQQ +1%). Cash at the floor. 13 positions need action.
+> **Book:** NAV $350K, beating QQQ this month. Cash at the floor. 13 positions need action.
 > **Yesterday:** 5 of 12 planned actions done; an APP short was added into earnings.
 > 🔴 Cover APP short (12 sh), past stop, −$680
 > 🔴 Close GME $25 call, expires Friday, in the money

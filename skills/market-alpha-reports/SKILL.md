@@ -30,10 +30,10 @@ Four reports, one skill. Each mode has its own job and template. The rules share
 |---|---|
 | **Book source** | A live Robinhood pull: `get_portfolio`, `get_equity_positions`, `get_option_positions` (all pages, nonzero only), working orders (`get_option_orders` / `get_equity_orders`, state confirmed) and the session's fills (state filled, plus `get_pnl_trade_history` for GTCs created on earlier days). The newest WarRoom PDF for this mode in the Drive folder `Robinhood Portfolio Review` (PRE: today's `PRE` or the latest `EOD`; MID: `MID`; AH: `EOD`; WKND: `WEEKBOOK` + the week's `EOD`) is **not pasted** (the live pull supersedes it). Appendix A1 gets its link, run time, CHECK line and the reconcile line: `Book reconcile: feed NAV $X vs live $Y (Δ Z%) · short lines feed N vs live M`. If they differ by more than 2%, or the line counts differ, use the live numbers and name the difference. If there's no PDF, say so and use the live pull alone. |
 | **Quote source** | Robinhood `get_equity_quotes` and `get_option_quotes` for every held name and every open short. They take up to 20 ids per call, so batch them. Use `get_equity_historicals` for prior closes and gap checks. |
-| Class and Floor B | The CLASS and Floor B columns in the WarRoom PDF appendix. If a name is missing: LC rules, `class? UNVERIFIED`. |
+| Class and Floor B | The CLASS and Floor B columns in the WarRoom PDF appendix. Name missing: Robinhood `get_equity_fundamentals` (market cap, sector) and the auto rule in `playbook.md`, tagged `class (auto)`. Floor B missing: `Floor B UNVERIFIED`. |
 | Indices, VIX, futures | Robinhood `get_index_quotes` (SPX, NDX, VIX, VIX1D, VXN where offered). RUT if restricted: IWM, labelled proxy. Futures: IBKR `get_price_snapshot` (ES, NQ, YM, RTY front month). |
 | Yields | Alpha Vantage `TREASURY_YIELD` (maturity 2year, 10year, 30year; daily close). Intraday: a timestamped page, else the daily close labelled `(close)`. |
-| DXY, FX | Twelve Data `get_quote` (DXY, EUR/USD, USD/JPY); if DXY is missing, IBKR `get_price_snapshot` on the DX future, labelled. |
+| DXY, FX | DXY: IBKR `get_price_snapshot` on the front DX future, labelled `DX future`; else Alpha Vantage `DX`; else N/A (Twelve Data has no indices). EUR/USD, USD/JPY: Twelve Data `get_quote`. |
 | Commodities | Alpha Vantage `BRENT`, `WTI`, `GOLD_SILVER_SPOT`; Twelve Data for intraday marks |
 | Crypto | Robinhood `get_crypto_quotes` (BTC-USD, ETH-USD) |
 | Credit | Robinhood quotes on HYG and LQD, labelled `ETF proxy` |

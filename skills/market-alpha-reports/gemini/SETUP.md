@@ -26,9 +26,9 @@ Delete any Gemini schedules for PRE, AH and WKND. If one fires anyway, the skill
 Each run expects the MID WarRoom PDF in `Robinhood Portfolio Review` first, at about 00:00 ICT (23:00 ICT in daylight time). If the audit is late, the report flags `STALE FEED` instead of guessing.
 
 ## 5. Check the first run of each mode
-- The Bottom Line has at most 5 actions. Repeat triggers come first.
-- Section 7 starts with a `Book feed:` line and a `Trigger scan: N lines checked` line, and N matches the PDF.
-- Works Cited has a provenance line for every Bottom Line number, then the Integrity line.
+- Section 1 (Summary) is at most 7 lines, and repeat triggers come first.
+- The header shows `Runner: Gemini` and the PDF's `CHECK:` line; A1 shows `Trigger scan: N lines checked (Q quoted · U unquoted)` and N matches the PDF's short option lines + stock lines.
+- A5 has a source line for every number in Sections 1–3, then the Integrity line.
+- No order in Section 3 sits on a `strike inferred` row.
 - The Handoff has FEED / ACTIONS / TRIGGERS, plus PUBLISHED CLOSES in AH and WKND.
 - The doc shows real headings, with no `#`, `**` or backticks, and only one doc exists for that day and mode.
-- In the PRE scorecard: a `Carry-in` line, not HIT grades.

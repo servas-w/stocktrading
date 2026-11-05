@@ -9,17 +9,19 @@ The platform `SKILL.md` defines the **book source** (positions, cash, NAV, fills
 ## 2. Book (the anti-fabrication rules)
 - Positions, quantities, strikes, expiries, cost basis, cash and NAV come **only** from the book source. Never from an earlier report, memory or a search result. Accounts: only those the book source returns.
 - **Check figure:** the book source prints `CHECK: <N> short option lines · <M> stock lines · $<X> short-put notional`. Copy it exactly into the header and into A1. Count the short option lines you actually listed in A1; the count must equal N. If the book source has no CHECK line, compute it from the positions table and label it `CHECK (computed)`.
+- **Inferred strikes:** a book-source row marked `strike inferred` (or with an off-grid strike such as 3.06 or 60.01) can be reported but never staged as an order; the order table says `confirm contract in app`.
 - **Feed-row rule:** every position mentioned in Sections 1–3 must exist in the book source's positions table with the same ticker, type, strike, expiry and quantity. In the Section 3 order table, copy that row into the **feed row** column. No matching row → the item is removed, not guessed.
 - **Ticker discipline:** copy tickers exactly as the book source prints them. Never "correct" a ticker (MRVI is not MRVL).
-- **Full trigger scan** over every short line and every stock line: R2, R3, R4, R5, R6, R7, R9, R10, R11, R12 (`playbook.md`). Print `Trigger scan: N lines checked · K hits` in A1. Every hit goes into Book Triggers, even if the book source's own summary didn't mention it.
+- **Full trigger scan** over every short line and every stock line: R2, R3, R4, R5, R6, R7, R9, R10, R11, R12 (`playbook.md`). Print `Trigger scan: N lines checked (Q quoted · U unquoted) · K hits` in A1, where N = CHECK's short option lines + stock lines. List the unquoted lines by name: they were checked on stale or missing marks, so R2/R4 results on them are `UNVERIFIED`. Every hit goes into Book Triggers, even if the book source's own summary didn't mention it.
 
 ## 3. Concentration (R5, v2.5 max-loss method)
 Per underlying:
 1. **Pair hedges:** match each short put with long puts on the same underlying at the same or lower strike that expire **on or after** the short. Highest long strike first, quantity for quantity. A pair counts its **width**: (short strike − long strike) × 100 × qty. A same-strike calendar counts 0.
 2. **Unpaired short puts:** strike × 100 × qty. Long puts that expire **before** the short don't pair; flag `hedge expires first`.
 3. **Shares:** long shares × spot. Short stock is measured under R11, not here.
-4. **% NAV** = (1 + 2 + 3) ÷ NAV. Amber ≥ 8%, red > 10%. BIO/SC sleeve = sum over BIO/SC names, cap 25%.
-5. Show **collateral tied up** (gross strike × 100 × qty before pairing) in its own column: hedged calendars can carry no risk and still lock up buying power, which is an R2 dead-collateral problem.
+4. **% NAV** = (1 + 2 + 3) ÷ NAV. Amber ≥ 8%, red > 10%. BIO/SC sleeve = sum of steps 1–3 over BIO/SC names, cap 25%.
+5. **Credit:** R5 widths are gross of credit on purpose (conservative); §6 max loss nets the credit for ROC. Don't mix them.
+6. Show **collateral tied up** (gross strike × 100 × qty before pairing) in its own column: hedged calendars can carry no risk and still lock up buying power, which is an R2 dead-collateral problem.
 
 Worked examples (book of 4 Nov 2026, NAV ≈ $350K):
 - **ACRS:** 233 short Nov $3P + 238 long Dec $3P → all pair at the same strike → R5 $0; collateral $69,900 → close the dead pennies (R2).

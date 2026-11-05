@@ -10,7 +10,7 @@ So every check asks for something a reader can verify in the doc, not just a ✓
 |---|---|---|---|
 | 1 | Feed & check figure | Header and A1 show the feed name, run time and `CHECK:` line; the short option lines listed in A1 equal N | `STALE FEED` / recount; never invent lines to match |
 | 2 | Feed-row rule | Every Section 3 order has a feed-row cell copied from the book source; every position named in Sections 1–2 exists in the book source | Remove the item |
-| 3 | Trigger scan | `Trigger scan: N lines checked · K hits` with N = CHECK's short option lines | Rescan |
+| 3 | Trigger scan | `Trigger scan: N lines checked (Q quoted · U unquoted) · K hits` with N = CHECK's short option lines + stock lines; unquoted lines named; no order staged on a `strike inferred` row | Rescan; drop the order |
 | 4 | Concentration | R5 uses the max-loss method; each row labelled `naked` / `spread width` / `hedged`, collateral column shown | Recompute (`core-rules.md` §3) |
 | 5 | Published closes | Every prior close matches the latest `PUBLISHED CLOSES` | Restore; add `(source now shows X)` |
 | 6 | Continuity | Unexplained moves tagged `UNVERIFIED` (benchmarks out of Section 1; held names in, with `check broker before acting`) | Tag and move |
