@@ -56,7 +56,7 @@ Worked examples (book of 4 Nov 2026, NAV ≈ $350K):
 ## 7. Benchmark & strategy scorecard
 - **Benchmarks:** QQQ, SPY and the CBOE PUT index (S&P put-write). Use published closes; PUT index N/A if not sourced. Price return unless a total-return source is cited.
 - **Book return is time-weighted:** daily r = (NAV_t − NAV_{t−1} − net deposits_t) ÷ NAV_{t−1}; period return = Π(1 + r) − 1. Net deposits come from the book source's transfers table; if transfers are missing, print `deposits UNVERIFIED` next to the return.
-- **NAV history:** every AH and WKND Handoff carries `NAV:` lines (date · NAV · net deposits). WKND rebuilds week, month and YTD from them. Missing days → say which.
+- **NAV history:** the Google Sheet `NAV History` in `Robinhood Portfolio Review` holds the series from 28 Sep 2026 (rebuilt from the EOD PDFs; QQQ/SPY official closes). Every AH and WKND Handoff carries `NAV:` lines (date · NAV · net deposits) for the sessions since. WKND reads the sheet plus the week's Handoffs, appends the week's rows to the sheet (same columns; if it can't write, list them under `NAV rows to paste` in A3), and computes week, month and since-28-Sep returns. Missing days → say which. Until A8 transfers exist, label returns `deposits UNVERIFIED`.
 - **Also show:** max drawdown of the NAV series and the leverage line (short-put max loss ÷ NAV) so a return is never read without its risk.
 - **Strategy scorecard (WKND, full; AH, one line):** group by journal setup tag (`playbook.md`). Per group: realized P&L, open P&L, win rate, average % captured, capital used, return on capital, verdict 🟢 keep / 🟡 fix / 🔴 stop with one plain sentence. Plus the **money map:** top 3 sources of profit and of loss this month by position.
 
