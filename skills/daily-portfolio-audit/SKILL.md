@@ -33,9 +33,10 @@ The user is in Da Nang (UTC+7) and runs this twice a day. Label every file by th
 - `tool_search "get_option_positions get_option_orders"`
 - `tool_search "get_option_quotes get_equity_quotes"`
 - `tool_search "get_pnl_trade_history get_equity_orders"`
+- `tool_search "get_banking_transactions"` (EOD only)
 - `tool_search "Google Drive create_file upload"`, then call **whichever `create_file` the search returns** (the prefix differs by install; never type a full tool name from memory)
 
-## Data calls (≤ 9; two parallel turns)
+## Data calls (≤ 10; two parallel turns, call 10 at EOD only)
 **Turn 1 (parallel, 6):**
 1. `get_portfolio` (5QR66081) → NAV, cash, buying power.
 2. `get_option_orders` (5QR66081, `state: "filled"`, `created_at_gte: SESSION_START`) → fills of orders **created** this session. **Never pull all states**: cancelled orders were ~80% of the tokens in the first run.
