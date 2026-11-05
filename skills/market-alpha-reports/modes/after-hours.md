@@ -1,43 +1,50 @@
 # AH — After-Hours Alpha Report (job: GRADE & JOURNAL)
 
-Answers whether the plan worked, what the book earned or missed, and what was logged, then builds tomorrow's hunt list. **This report publishes the session's official closes (PUBLISHED CLOSES).** Every later report reuses them.
-- **Horizon:** the trailing 24 hours (the last cash session plus post-market).
-- **Reads:** MID (ACTIONS, TRIGGERS), this session's PRE ACTIONS, the end-of-day book source with the session's fills, and the quote source.
-- **Hands off to:** the EOD War Room and the next PRE.
-- **Runs:** after the end-of-day audit, about 09:30 ICT Tue–Fri. The session date is the previous ICT date. Friday's session is graded by WKND.
-- **Budget:** ≤ 4,000 words plus the feed.
+What happened today and why, what it did to the book and how the book did against QQQ, what to watch tomorrow, and the journal. **This report publishes the session's official closes.**
+- **Horizon:** the last cash session plus after-hours.
+- **Reads:** this session's PRE and MID (ACTIONS, TRIGGERS), the EOD book source with fills and transfers, the quote source, the prior AH/WKND Handoff (NAV lines).
+- **Hands off to:** the next PRE.
+- **Runs:** after the EOD audit, about 09:30 ICT Tue–Fri. Friday's session is graded by WKND.
+- **Caps:** Section 1 ≤ 120 words · Section 2 ≤ 1,500 · Section 3 ≤ 500.
 
-## Checklist (after core steps 1–3 in the platform SKILL.md)
-- [ ] Scorecard: Tape grade for the MID call and today's Scenario Maps against the close; `Execution: X of Y actions done today` (PRE + MID)
-- [ ] Book (batch D): end-of-day book source → Book Map → full trigger scan; after-hours quotes on held names (movers ≥ ±5%); tripwire refresh; the session's fills
-- [ ] Macro (batch A): closes for SPX/NDX/DJI/RUT ✓✓; 2s10s; DXY; crude (contract month), gold, BTC; credit; Europe close. **Record these as PUBLISHED CLOSES**, along with every held name's close.
-- [ ] Equities (batch B): 11 sectors; > $50B leaders/laggards with closing volume; price-target changes since the open; AMC earnings (GAAP vs non-GAAP, guidance, call disclosures); SEC filings 16:00–18:30 ET (8-K, S-3, Form 4); Mag 7 closes + extended-hours marks
-- [ ] Vol & screens (batch C): put screener + next-session hunt list; Short Bench status
-- [ ] Trade Journal: append the session's fills to the Google Sheet `Trade Journal`, with the rule check from `playbook.md`
+## Data checklist (after core steps 1–3)
+- Book: EOD feed + CHECK → full trigger scan; fills; transfers (for the benchmark); after-hours quotes on held names.
+- Closes (= PUBLISHED CLOSES): SPX, NDX, DJI, RUT, QQQ, SPY, CBOE PUT index, 2Y/10Y/30Y, DXY, Brent, WTI, gold, BTC, VIX, plus every held name.
+- Market: 11 sectors; > $50B leaders/laggards with closing volume and cause; Mag 7 (all seven: close, day change, after-hours).
+- Your names and peers: day move, after-hours move, cause.
+- AMC earnings: held names, peers, and the day's top event (close, after-hours reaction, guidance, call highlights).
+- Filings 16:00–18:30 ET on held names (8-K, S-3/ATM, Form 4); analyst actions since the open.
+- Tomorrow: data, Fed, earnings of held names and peers with expected move vs cushion; expiries.
 
-## Template (keep this numbering)
-Header + Metadata (`Ref: AH-<date>`) · Bottom Line · Scorecard (Tape + Execution + Repeat triggers) · Key Judgments (≤ 4)
-1. **Shkreli book autopsy & cash-close summary:** what the close did to the positions nearest a trigger; earnings quality vs closing euphoria or panic
-2. **Closing ledger & cross-asset matrix:** Cross-Asset Dashboard (closing clocks, marked `PUBLISHED CLOSE`), curve + Strategic Themes Desk (brief)
-3. **Sector dispersion & rotations** (11 sectors, rotation status)
-4. **Large-cap leaders & laggards (> $50B)** with closing volume and catalyst (top 3 each)
-5. **Analyst price-target upgrades & downgrades** since the open (held and watchlist names first, 8 max)
-6. **AMC earnings deconstruction & sympathy matrix:** `[Guidance ≠ Realized Cash Flow]`; conference-call disclosures (capex, margins, backlog); breadth check `[Aggregate ≠ Breadth]`. Held names and names with open puts first.
-7. **Portfolio closing ledger & P&L attribution:** Book feed line · Trigger scan line · feed verbatim · session fills (net credit/debit) · **missed harvest** (every HARVEST row still open at the close, $ total) · Tripwire top 5 (after-hours) · themes ≥ 5% NAV · held-lot status table (triggered or ±5% rows only) · held movers ≥ ±5% after hours (or the None line) · Greeks (or STALE) · Book Triggers · held-lot unrealized beside realized P&L
-8. **Post-close SEC filings (16:00–18:30 ET):** 8-K, S-3 dilution, Form 4 `[Plan ≠ Realized Execution]`; if none: `None filed during this window.`
-9. **Mag 7 closing matrix & post-market microstructure:** all seven names with close, day change and extended-hours mark (no N/A close without a reason), volume vs average, IV status
-10. **Screener & hunt list:** put candidates (top 3 or the No-tickers line) · next-session hunt list (GREEN) · Short Bench (held shorts first; next-session trigger and stop) · Scenario Map (next session) · Indicators & Warning Signs · Decision Gates
-11. **Trade Journal logging summary:** rows added or closed, rules broken (by number and name), and today's rule-adherence %
-12. **Works Cited** (Source Notes with provenance lines) + Integrity line
-War Room Handoff (core-rules §9, including PUBLISHED CLOSES; HELD MOVERS = after hours; ACTIONS = next session)
+## What goes in each slot
+**Section 1 — Summary:** market in one sentence · book: NAV, today vs QQQ, cash vs floor, positions needing action · `Execution: X of Y actions done today` + biggest slip · top 3–5 items.
+
+**Section 2 — Market & your book**
+- **2.1 Story of the day:** the driver and why; running-story chapters.
+- **2.2 Movers that matter:** your names (close + after-hours), peers and sympathy moves, market leaders and laggards with causes; after-close earnings reactions.
+- **2.3 Themes & read-throughs:** one line per theme you hold, with the net $ effect on the book.
+- **2.4 Your book today:**
+  - **P&L explained:** top 3 gains and top 3 losses, and why.
+  - **Benchmark line:** `Today: book +x% vs QQQ +y% · SPY +z% · PUT +w%`, plus one sentence on what drove the gap.
+  - Positions that got more dangerous; missed harvest ($ total of HARVEST rows still open).
+  - Expected move vs cushion for upcoming events; expiry and assignment exposure vs buying power.
+  - Short-squeeze watch; liquidity warnings; red flags from post-close filings.
+- **2.5 What to watch tomorrow:** calendar in ET and ICT, if-then lines, top 3 risks.
+- **2.6 Opportunities:** today's large-cap dislocations, labelled candidates.
+
+**Section 3 — Action plan:** next-session orders (feed-row column filled), do-not-do list, gates for the open.
+
+**Appendix:** A1 book tables · A2 closing dashboard, sectors, Mag 7, vol · A3 benchmark line with inputs and the NAV row added today · A4 journal rows · A5 sources + Integrity · A6 Handoff (PUBLISHED CLOSES, NAV lines, ACTIONS = next session).
+
+## Journal (A4)
+Append today's fills to the Google Sheet `Trade Journal` following `core-rules.md` §12: text dates, v2.5 setup tags, `Y` / `N (R#: reason)`. If the sheet can't be written, list the rows in A4 under `Journal rows to paste` and say so in the chat reply.
 
 ## Mode rules
-- PUBLISHED CLOSES use the official 16:00 ET close. For held names, use the book or quote source's close; if a search source differs by more than 0.5%, note it.
-- New shorts under 30 DTE are allowed (tag them OPP); don't log them as breaches.
-- The day's top AMC event (the one named in the Bottom Line) gets its close, after-hours reaction and guidance in Section 6. If any of them can't be sourced, say why.
+- PUBLISHED CLOSES use the official 16:00 ET close. Held names: the book or quote source's close; note any search source that differs by more than 0.5%.
+- New shorts under 30 DTE are allowed (OPP); don't log them as breaches.
 
 ## Common mistakes
-- Treating an extended-hours print as the close.
-- Logging assigned-lot losses as options P&L.
-- Grading entries against an old DTE/delta window. Use `playbook.md`.
-- Publishing a close that disagrees with the book source's close without a note.
+- Treating an after-hours print as the close, or quoting two different after-hours prices for the same name.
+- Reporting NAV change as performance without stripping deposits.
+- Logging assigned-lot losses as option P&L.
+- Writing journal dates as numbers (46329).

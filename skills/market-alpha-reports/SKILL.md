@@ -15,7 +15,7 @@ Four reports, one skill. Each mode has its own job and template. The rules share
 
 **Pick the mode:** an explicit word wins (PRE, MID, AH, WKND, or the report name). Otherwise convert the current time to ET (core-rules §1) and use: Mon–Fri 04:00–09:29 ET → PRE · Mon–Fri 09:30–15:59 ET → MID · Mon–Thu 16:00 ET until 04:00 ET the next day → AH · Fri 16:00 ET until Mon 04:00 ET → WKND. If that week's WKND doc already exists, ask in one line.
 
-**Read before writing:** the mode file, `references/core-rules.md`, `references/playbook.md` and `references/integrity.md`. If `apply-market-report-standards`, `render-book-desks` or `build-short-bench` are installed, use them for desk layouts; where they conflict with these files, these files win.
+**Read before writing, every run:** the mode file, `references/report-layout.md`, `references/style.md`, `references/core-rules.md`, `references/playbook.md` (v2.5, R1–R12) and `references/integrity.md`. If `apply-market-report-standards`, `render-book-desks` or `build-short-bench` are installed, use them for desk layouts only; where they conflict with these files, these files win.
 
 ## Ground rules (Claude)
 - **Runner:** Claude runs PRE, AH and WKND; Gemini runs MID (core-rules §11). Write `Runner: Claude` in the header. If a scheduled run asks for MID, stop and say so; run it only if Wilson asks in this chat.
@@ -28,7 +28,7 @@ Four reports, one skill. Each mode has its own job and template. The rules share
 ## Platform mapping (Claude)
 | Need | Source |
 |---|---|
-| **Book source** | A live Robinhood pull: `get_portfolio`, `get_equity_positions`, `get_option_positions` (all pages, nonzero only), working orders (`get_option_orders` / `get_equity_orders`, state confirmed) and the session's fills (state filled, plus `get_pnl_trade_history` for GTCs created on earlier days). The newest WarRoom PDF for this mode in the Drive folder `Robinhood Portfolio Review` (PRE: today's `PRE` or the latest `EOD`; MID: `MID`; AH: `EOD`; WKND: `WEEKBOOK` + the week's `EOD`) is **not pasted** (the live pull supersedes it). Section 7 gets its link, its run time, its breach list in one line, and the reconcile line: `Book reconcile: feed NAV $X vs live $Y (Δ Z%) · short lines feed N vs live M`. If they differ by more than 2%, or the line counts differ, use the live numbers and name the difference. If there's no PDF, say so and use the live pull alone. |
+| **Book source** | A live Robinhood pull: `get_portfolio`, `get_equity_positions`, `get_option_positions` (all pages, nonzero only), working orders (`get_option_orders` / `get_equity_orders`, state confirmed) and the session's fills (state filled, plus `get_pnl_trade_history` for GTCs created on earlier days). The newest WarRoom PDF for this mode in the Drive folder `Robinhood Portfolio Review` (PRE: today's `PRE` or the latest `EOD`; MID: `MID`; AH: `EOD`; WKND: `WEEKBOOK` + the week's `EOD`) is **not pasted** (the live pull supersedes it). Appendix A1 gets its link, run time, CHECK line and the reconcile line: `Book reconcile: feed NAV $X vs live $Y (Δ Z%) · short lines feed N vs live M`. If they differ by more than 2%, or the line counts differ, use the live numbers and name the difference. If there's no PDF, say so and use the live pull alone. |
 | **Quote source** | Robinhood `get_equity_quotes` and `get_option_quotes` for every held name and every open short. They take up to 20 ids per call, so batch them. Use `get_equity_historicals` for prior closes and gap checks. |
 | Class and Floor B | The CLASS and Floor B columns in the WarRoom PDF appendix. If a name is missing: LC rules, `class? UNVERIFIED`. |
 | Indices, VIX, futures | Robinhood `get_index_quotes` (SPX, NDX, VIX, VIX1D, VXN where offered). RUT if restricted: IWM, labelled proxy. Futures: IBKR `get_price_snapshot` (ES, NQ, YM, RTY front month). |
@@ -41,19 +41,24 @@ Four reports, one skill. Each mode has its own job and template. The rules share
 | IV Rank for the put screener (R1) | IBKR `get_option_data` (IV percentile 52w / 26w). If unavailable: `IVR unverified`. |
 | Retail sentiment | Stocktwits `get_sentiment` / `get_trending_symbols`; otherwise N/A |
 | Math | Code execution with the formulas in core-rules §6. Show the inputs. |
-| Greeks line | Compute from the `get_option_quotes` already pulled: net delta $ = Σ(Δ × 100 × qty × spot) over option lines + Σ(shares × spot); theta $/day = Σ(θ × 100 × qty); vega $/pt = Σ(vega × 100 × qty). Short qty is negative. Lines with no Greeks count as Δ −1 if ITM (put), else are listed as excluded. Label it `computed from Robinhood quotes, <time>`. |
+| Greeks line | Compute from the `get_option_quotes` already pulled: net delta $ = Σ(Δ × 100 × qty × spot) over option lines + Σ(shares × spot); theta $/day = Σ(θ × 100 × qty); vega $/pt = Σ(vega × 100 × qty). Short qty is negative. Label it `computed from Robinhood quotes, <time>`. |
+| Check figure | Compute `CHECK (live): <N> short option lines · <M> stock lines · $<X> short-put notional` from the live pull. When a WarRoom PDF exists, also print its CHECK line; a mismatch is named in A1. |
+| Feed row | The live position row (ticker · type · strike · expiry · qty) from `get_option_positions` / `get_equity_positions`. |
+| Benchmarks & deposits | QQQ and SPY via Robinhood `get_equity_quotes` / `get_equity_historicals`; CBOE PUT index via web search (else N/A). Deposits and withdrawals via Robinhood `get_banking_transactions` (transfers into and out of the brokerage account). |
+| Expected move | Robinhood `get_option_chains` + `get_option_quotes`: front-expiry ATM call + put mark ÷ spot. |
+| Short-squeeze & liquidity | Robinhood option quotes (bid/ask, open interest) for liquidity; short interest and borrow from a sourced page, else N/A. |
 | Stress source | The WEEKBOOK PDF's S1–S5 table, tagged `STALE (as of <PDF time>)`; otherwise N/A. Never estimate. |
-| Journal | Read the Google Sheet `Trade Journal` with Drive `read_file_content`. Claude can't edit Sheets, so AH and WKND put the new rows in Section 11 (AH) or Section 6 (WKND) as a `Journal rows to paste` table in the sheet's column order, and list them in the chat reply. |
+| Journal | Read the Google Sheet `Trade Journal` with Drive `read_file_content` (export as CSV for the full sheet). Claude can't edit Sheets, so AH and WKND put new rows in A4 as `Journal rows to paste`, in the sheet's column order with text dates and v2.5 setup tags (`core-rules.md` §12), and list them in the chat reply. |
 | Save | See *Save (Claude)* below. |
 
 ## Steps (every mode, in order)
 1. **Clock:** core-rules §1.
-2. **Book:** the book source → Book feed line → full trigger scan (core-rules §2–3).
-3. **Handoffs:** read ACTIONS and TRIGGERS from the previous report, and PUBLISHED CLOSES from the latest AH/WKND (core-rules §4–5, §9). Read the earlier reports with Drive `read_file_content`.
-4. **Data:** the mode checklist, batched as macro, then equities, then vol.
-5. **Write:** the mode template in order, within the length budget (core-rules §8). Write the whole report as one markdown file in the scratch or outputs folder.
+2. **Book:** live pull → CHECK line → feed reconcile → full trigger scan (`core-rules.md` §2–3).
+3. **Handoffs:** ACTIONS and TRIGGERS from the previous report; PUBLISHED CLOSES and NAV lines from the latest AH/WKND (`core-rules.md` §4–5, §7, §9). Read earlier reports with Drive `read_file_content`.
+4. **Data:** the mode checklist: macro, then movers and news, then vol and calendar.
+5. **Write:** the `report-layout.md` sections in order using `style.md`; Section 1 last, copying values from the sections below it. Write the whole report as one markdown file in the scratch or outputs folder.
 6. **Integrity:** run `integrity.md`; fix or tag anything that fails.
-7. **Save and verify** (below). Reply in chat with the doc link, the Bottom Line `Action:` lines and, for AH and WKND, the journal rows.
+7. **Save and verify** (below). Reply in chat with the doc link, the Section 1 summary and, for AH and WKND, the journal rows to paste.
 
 ## Save (Claude; overrides core-rules §11 steps 1–2)
 The Drive connector converts markdown into a native Google Doc with real headings, bold, tables and bullets (tested 3 Nov 2026). It can't edit an existing doc's contents, so a re-run replaces the doc instead of updating it.

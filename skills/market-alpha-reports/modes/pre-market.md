@@ -1,43 +1,39 @@
 # PRE — Pre-Market Alpha Report (job: PLAN)
 
-Gives the verdict, opening posture, risk budget and execution shortlist for today's session.
-- **Reads:** the latest AH/WKND Handoff (ACTIONS, TRIGGERS, PUBLISHED CLOSES), the latest weekend stress test, the book source and the quote source.
-- **Hands off to:** MID and the Mid-Market War Room.
-- **Runs:** 09:00 ET, after the 8:30 data: 21:00 ICT in US standard time, 20:00 ICT in US daylight time. Re-runs update the same doc (vN).
-- **Budget:** ≤ 3,500 words plus the feed.
+What happened overnight, what it means for the book, and the plan for the open.
+- **Reads:** the book source (today's PRE snapshot if present, else the latest EOD), the latest AH/WKND Handoff (ACTIONS, TRIGGERS, PUBLISHED CLOSES, NAV), the quote source.
+- **Hands off to:** MID.
+- **Runs:** 09:00 ET, after the 8:30 data (21:00 ICT in US standard time, 20:00 ICT in daylight time). Never before 08:30 ET. Re-runs update the same doc (vN).
+- **Caps:** Section 1 ≤ 120 words · Section 2 ≤ 1,200 · Section 3 ≤ 500.
 
-## Checklist (after core steps 1–3 in the platform SKILL.md)
-- [ ] Book (batch D): book source → Book Map → full trigger scan. Pre-market quotes for every name with a trigger plus the top 10 exposures by % NAV (movers ≥ ±5%, tripwire distances). Other names keep their book-source mark, labelled `as of feed`.
-- [ ] Macro (batch A): ES/NQ/YM/RTY ✓✓ with clocks; 2Y/10Y/30Y; DXY, EUR/USD; Brent/WTI (contract month), gold, BTC; IG/HY credit; OAT–Bund; Europe/Asia closes; 8:30/10:00 releases vs consensus vs prior; Fed speakers today
-- [ ] Equities (batch B): BMO earnings with guidance; > $50B pre-market gappers with RVOL and catalyst; analyst actions 05:00–08:30 ET; retail sentiment (Source-or-N/A)
-- [ ] Vol & screens (batch C): VIX, VIX1D, VXN → bands; dealer gamma (N/A unless a live source); put screener; Short Bench refresh + Rolling Over scan
+## Data checklist (after core steps 1–3)
+- Book: feed + CHECK → full trigger scan → pre-market quotes for every triggered name and the top 10 exposures (others keep the feed mark, `as of feed`).
+- Overnight: ES/NQ/YM/RTY with clocks; Asia and Europe closes; overnight news on held names, peers and themes; crypto (Mondays: the whole weekend) for MSTR, IBIT, COIN; China ADR moves for BABA, BIDU.
+- Today: 8:30/10:00 ET data vs consensus vs prior; Fed speakers; BMO earnings (held names, peers, > $50B) with guidance; earnings tonight for held names and peers with the **expected move**; analyst actions 05:00–08:30 ET on held and watched names; overnight 8-K, S-3/ATM, offerings on held names.
+- Vol: VIX, VIX1D, VXN; IV on names with events; gamma (N/A unless sourced).
 
-## Template (keep this numbering; the Handoff and feeds rely on it)
-Header + Metadata (`Ref: PM-<date>`) · Bottom Line · Scorecard (Carry-in + Repeat triggers; see core-rules §7) · Key Judgments (≤ 4)
-1. **Shkreli book autopsy & executive summary:** net exposure to the overnight driver; the 2–4 positions nearest a trigger, chosen from the full trigger scan; session posture (Capital Preservation / Tactical Put Writing / Downside Hedging)
-2. **Overnight handover & index futures:** Cross-Asset Dashboard (futures ✓✓, cash vs futures clocks tagged; prior close = PUBLISHED CLOSES)
-3. **Macro data & central bank schedule:** 8:30/10:00 ET table (Consensus · Prior · Actual), anti-synthesis enforced
-4. **BMO earnings deconstruction:** EPS/revenue vs consensus, guidance (`[Guidance ≠ Realized Cash Flow]`), sympathy names; breadth check `[Aggregate ≠ Breadth]`. 6 names max, held and sympathy names first.
-5. **Pre-market large-cap movers (> $50B):** top 5 gainers and losers with RVOL and catalyst
-6. **Analyst actions (05:00–08:30 ET):** held and watchlist names first, 6 max
-7. **Portfolio & watchlist radar:** Book feed line · Trigger scan line · feed verbatim · Harvest open plan · Tripwire top 5 · themes ≥ 5% NAV · lot-desk exceptions · held movers ≥ ±5% pre-market (price, %, volume, catalyst, strike impact, or the None line) · Greeks (or STALE) · Book Triggers
-8. **Opening gamma & expected-move bands:** gamma levels or N/A/STALE; daily 1σ/2σ for SPX and NDX (core-rules §6), inputs shown
-9. **Policy, geopolitics & commodities:** three-layer unbundling + Strategic Themes Desk (full on Mondays and after a holiday; brief otherwise)
-10. **Retail sentiment radar** (Source-or-N/A; one line if nothing new)
-11. **Opening-bell checklist:** staged order table (all orders, ranked by risk removed) · put shortlist (top 3 or the No-tickers line) · Short Bench (held shorts first) · if-then triggers for the open · Scenario Map (today's session) · Indicators & Warning Signs · Decision Gates
-12. **Works Cited** (Source Notes with provenance lines) + Integrity line
-War Room Handoff (core-rules §9; HELD MOVERS = pre-market)
+## What goes in each slot
+**Section 1 — Summary:** market overnight in one sentence · book (NAV, cash vs floor, positions needing action) · `Carry-in: N actions staged from <Ref>` · top 3–5 items with 🔴/🟡, repeats first.
+
+**Section 2 — Market & your book**
+- **2.1 Overnight story:** what moved futures and why; the morning's data and how it landed; any running-story chapter.
+- **2.2 Pre-market movers:** (a) your names gapping ±3% or more, (b) peers and suppliers that move them, (c) > $50B gappers with RVOL and cause.
+- **2.3 Themes:** one line per theme you hold, with today's setup.
+- **2.4 Your book this morning:** positions closer to a trigger after the overnight move; events this week with **expected move vs cushion**; expiry and assignment exposure this week vs buying power; short-squeeze watch (short interest, borrow, overnight move) on short stock; red flags filed overnight.
+- **2.5 What to watch today:** the day's calendar in ET and ICT (data, Fed, auctions, earnings of held names and peers); if-then lines for the open; top 3 risks and their early-warning sign.
+- **2.6 Opportunities:** pre-market dislocations in large caps, labelled `candidate — run LC/BIO underwriting first`. While any R3, R5 or R12 trigger is open: `No new underwriting until <triggers> are cleared`.
+
+**Section 3 — Action plan:** orders for the open (feed-row column filled), do-not-do list, gates for 09:30–10:30 ET.
+
+**Appendix:** A1 book tables · A2 futures/yields/FX/commodities/crypto dashboard, bands, vol · A5 sources + Integrity · A6 Handoff (`HELD MOVERS` = pre-market).
 
 ## Mode rules
-- A held name quoted through its tripwire pre-market becomes a Bottom Line `Action:`.
-- Harvest open plan: HARVEST rows plus HOLD rows within 10% of target, each with a GTC buy-to-close price to enter before the bell.
-- Pre-market marks are previews: write `PM $X (as of HH:MM ET)` and never grade anything on them.
-- Defense first: while any R3 or R5 trigger is open, the put shortlist prints `No new underwriting until <triggers> are cleared`.
-- The ACTIONS in this Handoff are today's plan. MID grades them.
+- Pre-market prints are previews: write `PM $X (as of HH:MM ET)` and never grade on them.
+- A held name quoted through its tripwire pre-market becomes a 🔴 item and a Section 3 order.
+- The Handoff ACTIONS are today's plan; MID grades them.
 
 ## Common mistakes
-- Running before the 8:30 ET releases.
-- Quoting futures and cash yields as one synchronized mark.
-- Treating a pre-market gap as confirmed before the open (`[Price ≠ Proof]`).
-- Using last night's option marks for harvest $ without the label `as of feed <time>`.
-- Listing only the names the book source's summary highlighted (that is how the 2 Nov report missed 7 ITM Nov-20 lines).
+- Running before 08:30 ET (the 4 Nov PRE ran at 05:02 ET and missed the data).
+- Treating a pre-market gap as confirmed.
+- Using last night's option marks as live (`as of feed <time>`).
+- Listing positions that aren't in the feed (the 4 Nov PRE invented CAPR $35/$32/$30 puts).

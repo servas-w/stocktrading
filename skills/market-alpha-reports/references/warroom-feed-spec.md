@@ -9,14 +9,16 @@ The Gemini edition can't reach Robinhood, so the WarRoom PDFs in `Robinhood Port
 
 > **Appendix for the market reports (always include, after the narrative; plain tables, one row per line, no merged cells):**
 > 1. **Header:** account(s) · audit type (PRE / MID / EOD / WEEKBOOK) · run time `HH:MM ET / HH:MM ICT` · session date.
+>    **CHECK line**, exactly: `CHECK: <N> short option lines · <M> stock lines · $<X> short-put notional` (N = short rows printed in table 4).
 > 2. **SNAPSHOT:** NAV · cash · buying power · options value long/short · short put notional · net delta $ · theta $/day · vega $/pt.
 > 3. **STOCK POSITIONS (every line):** ticker · class (LC/MC or BIO/SC) · qty (negative = short) · cost basis · spot · spot time · unrealized $ · unrealized %.
 > 4. **OPTION POSITIONS (every line, not just flagged ones):** ticker · class · Floor B · type · strike · expiry · qty (negative = short) · avg open price · mark · Δ · DTE · cushion % · % captured.
 > 5. **QUOTES:** every underlying held or optioned: last · prior close · pre-market or after-hours mark if any · quote time.
 > 6. **FILLS (this session):** time · ticker · contract or shares · side · qty · price · opening/closing.
 > 7. **WORKING ORDERS:** ticker · contract · side · qty · limit · tif · placed time.
+> 7b. **TRANSFERS (EOD/WEEKBOOK):** date · deposit/withdrawal · amount (for the QQQ benchmark); include QQQ and SPY in table 5.
 > 8. **WEEKBOOK only, STRESS:** S1 SPX −10% × β + 10 IV pts · S2 tech/AI −20% + 10 IV pts · S3 IV +15 pts · S4 largest name −30% · S5 biotech sleeve −20% + 10 IV pts: loss $, % NAV, worst 3 contributors.
-> File names keep the audit type: `WarRoom_<date>_<n>-PRE.pdf`, `…-MID.pdf`, `…-EOD.pdf`, `…-WEEKBOOK.pdf`.
+> File names carry type and run time: `WarRoom_<date>_<n>-<TYPE>-<HHMM>.pdf` (TYPE = PRE, MID, EOD or WEEKBOOK; HHMM = ET run time), so no two files share a name. Tickers exactly as the API returns them.
 ---
 
 ## Optional: a PRE snapshot

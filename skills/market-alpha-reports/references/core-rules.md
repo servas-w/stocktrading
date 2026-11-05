@@ -1,132 +1,113 @@
 # Core rules (shared by every mode and both platforms)
 
-The platform `SKILL.md` defines two sources:
-- **book source:** positions, cash, NAV, fills, orders and Greeks.
-- **quote source:** prices for held names.
-
-Everything else is defined here. Rule names and terms come from `playbook.md`.
+The platform `SKILL.md` defines the **book source** (positions, cash, NAV, fills, orders, transfers) and the **quote source** (prices for held names). Layout is in `report-layout.md`, writing style in `style.md`, rules and terms in `playbook.md` (v2.5, R1–R12).
 
 ## 1. Clock and DST
-- US daylight time runs from the second Sunday of March to the first Sunday of November. During it, ET = ICT − 11h; otherwise ET = ICT − 12h. Work out which applies from the session date. Never hard-code a date.
-- Print every time as `HH:MM ET / HH:MM ICT`. Check for US market holidays and half-days before writing.
+- US daylight time runs from the second Sunday of March to the first Sunday of November: ET = ICT − 11h. Otherwise ET = ICT − 12h. Work it out from the session date; never hard-code a date.
+- Times print as `HH:MM ET / HH:MM ICT`. Check US market holidays and half-days first.
 
-## 2. Book
-- Positions, quantities, strikes, cost basis, cash and NAV come only from the book source. Never take them from an earlier report, from memory or from a search result.
-- Show only the accounts the book source returns. Never infer another account's positions.
-- First line of Section 7: `Book feed: <source> (as of <time>) · NAV $X · short option lines N · stock lines M`.
-- **Full trigger scan:** check every short line against R2 (velocity, ≥ 80% captured or mark ≤ $0.05, no working buy-to-close), R3 (ITM at ≤ 21 DTE; OPP tags), R4 (LC/MC: within 7% of strike or Δ ≤ −0.30; BIO/SC: Floor B rule; adds in defense; one ticket per name) and R6 (earnings before expiry). Check every name against R5, every held lot against R7, every short stock line against R8, and every opening fill against R9. Every hit goes into Book Triggers, even if the book source's own summary doesn't mention it. Print `Trigger scan: N lines checked · K hits`.
+## 2. Book (the anti-fabrication rules)
+- Positions, quantities, strikes, expiries, cost basis, cash and NAV come **only** from the book source. Never from an earlier report, memory or a search result. Accounts: only those the book source returns.
+- **Check figure:** the book source prints `CHECK: <N> short option lines · <M> stock lines · $<X> short-put notional`. Copy it exactly into the header and into A1. Count the short option lines you actually listed in A1; the count must equal N. If the book source has no CHECK line, compute it from the positions table and label it `CHECK (computed)`.
+- **Feed-row rule:** every position mentioned in Sections 1–3 must exist in the book source's positions table with the same ticker, type, strike, expiry and quantity. In the Section 3 order table, copy that row into the **feed row** column. No matching row → the item is removed, not guessed.
+- **Ticker discipline:** copy tickers exactly as the book source prints them. Never "correct" a ticker (MRVI is not MRVL).
+- **Full trigger scan** over every short line and every stock line: R2, R3, R4, R5, R6, R7, R9, R10, R11, R12 (`playbook.md`). Print `Trigger scan: N lines checked · K hits` in A1. Every hit goes into Book Triggers, even if the book source's own summary didn't mention it.
 
-## 3. Concentration (R5): the official test plus a net-of-hedge column
-**R5 test (official, matches the WarRoom PDF):** per name, % NAV = (short-put strike × 100 × qty + shares held × spot) ÷ NAV. Same-name long puts are **not netted**. Amber ≥ 8%, red > 10%. BIO/SC sleeve = BIO/SC put notional + BIO/SC shares, cap 25% of NAV. This number decides R5 breaches.
+## 3. Concentration (R5, v2.5 max-loss method)
+Per underlying:
+1. **Pair hedges:** match each short put with long puts on the same underlying at the same or lower strike that expire **on or after** the short. Highest long strike first, quantity for quantity. A pair counts its **width**: (short strike − long strike) × 100 × qty. A same-strike calendar counts 0.
+2. **Unpaired short puts:** strike × 100 × qty. Long puts that expire **before** the short don't pair; flag `hedge expires first`.
+3. **Shares:** long shares × spot. Short stock is measured under R11, not here.
+4. **% NAV** = (1 + 2 + 3) ÷ NAV. Amber ≥ 8%, red > 10%. BIO/SC sleeve = sum over BIO/SC names, cap 25%.
+5. Show **collateral tied up** (gross strike × 100 × qty before pairing) in its own column: hedged calendars can carry no risk and still lock up buying power, which is an R2 dead-collateral problem.
 
-**Net-of-hedge column (information only, never used for R5):** shows the risk that remains after hedges, so the fix can be sized:
-1. Pair each short put with long puts on the same underlying, at the same or a lower strike, that expire **on or after** the short put. Take the highest long strike first, quantity for quantity. Exposure = (short strike − long strike) × 100 × paired qty. A same-strike calendar nets to 0.
-2. Unpaired short puts count at strike × 100 × qty. Long puts that expire **before** the short put don't pair; flag them `hedge expires first`.
-3. Add shares × spot. Short calls covered by shares add nothing. A naked short call is flagged `unlimited`.
-
-Worked examples (book of late Oct 2026, NAV ≈ $343K):
-- **ACRS:** 233 short Nov $3P (+ 237 long Dec $3P) → R5 = $69,900 = 20.4% NAV, **red**. Net of hedge: $0, because the calendar covers it. The cheapest cure is closing the dead pennies (R2) for about $0.05.
-- **CMPX:** 251 short Nov $1P (+ 207 long Dec $1P) → R5 = $25,100 = 7.3%, below amber. Net of hedge: 44 × $100 = $4,400 = 1.3%.
-- **CAPR:** 283 short Dec $2P (+ long Nov 27 $2P) → R5 = $56,600 = 16.5%, **red**. Net of hedge: the same, `hedge expires first`.
+Worked examples (book of 4 Nov 2026, NAV ≈ $350K):
+- **ACRS:** 233 short Nov $3P + 238 long Dec $3P → all pair at the same strike → R5 $0; collateral $69,900 → close the dead pennies (R2).
+- **CMPX:** 251 short Nov $1P + 207 long Dec $1P → 44 unpaired × $100 = $4,400 = 1.3%.
+- **CAPR:** 153 short Dec $2P; the Nov 27 longs expire first → 153 × $200 = $30,600 = 8.7%, amber.
+- **META:** 570/420 put spread + 24 shares → width $15,000 + shares ≈ $15,100 = ≈ 8.6%, amber.
 
 ## 4. Repeat triggers
-- Each Handoff carries `TRIGGERS:` (see §9). When a trigger is still open, copy it forward and add 1 to its count. When it's cleared, mark it `cleared` once, then drop it.
-- A count ≥ 3 makes it a repeat. **Only** a trigger with count ≥ 3 may carry the `REPEAT` label; a count of 1–2 is never labelled REPEAT.
-- **Bottom Line order:** the `Action:` list starts with REPEAT triggers (highest count first, then by risk removed), then the rest by risk removed. If there are more than 5 repeats, the 5 with the highest risk come first and the others stay in the full order table.
-- `Repeat triggers: n` in the Scorecard = the number of `TRIGGERS:` lines in **this** report's Handoff with count ≥ 3 and status open. Count them from the Handoff you actually wrote.
+- Each Handoff carries `TRIGGERS:`. Still open → copy forward, count + 1. Cleared → mark `cleared` once, then drop.
+- Count ≥ 3 → `REPEAT ×n`. Only count ≥ 3 may carry the label. Repeats lead Section 1's top items and Section 3's order table.
+- `Repeat triggers: n` = open TRIGGERS lines with count ≥ 3 in **this** report's Handoff.
 
 ## 5. Number discipline
-- **Source-or-N/A:** every market number needs a source page and the time shown on that page. If none is found, print `N/A`. Never fill a gap with a plausible, "implied" or derived value (for example "SPX ~7,618 implied").
-- **Dates on results:** a page dated before the session window is context, not a current mark. Tag it `(as of <date>)`. Gamma levels, IVR, Greeks and stress results not refreshed this run get `STALE (as of …)`.
-- **Published closes:** a session's close is set by the first AH (Mon–Thu) or WKND (Fri) report for that session and listed in its `PUBLISHED CLOSES:`. Every later report takes "prior close" from the **latest** AH/WKND Handoff, whatever its own prior report was. If a fresh source disagrees, keep the published number and add `(source now shows X)`.
-- **Continuity check:**
-  - **Benchmarks** (index, FX, commodity, BTC) moving more than 2% versus the published close with no cited catalyst: search again. If it still doesn't reconcile, print `UNVERIFIED` and leave it out of Key levels and the bands.
-  - **Held names** moving more than 5% with no cited catalyst: re-check against the quote source. If it still doesn't reconcile, **keep it** in the Bottom Line and triggers as `UNVERIFIED — check broker before acting`. Never set an order limit from an unverified price.
-- **✓✓** only when two independent pages agree: stock ±0.5%, index/ETF ±0.1%, yield ±2 bp, FX ±0.1%, commodity ±0.5%, BTC ±0.5%, VIX ±0.2 pt. Two pages fed by the same syndicated feed count as one. Otherwise use `✓`.
-- **Links:** each link opens the page that shows the number. Never link a generic quote page for a pre-market or after-hours mark it doesn't display, and never link an article about something else.
-- **Calendar dates** (earnings, PDUFA, data releases): accept company investor relations, the exchange or SEC, or an official calendar of any age, or news ≤ 30 days old. If sources conflict, print `date unconfirmed — check before expiry`.
-- **One value per item:** a ticker has the same price, strike and quantity in every section. Section 7 is the reference. Every number in the Bottom Line and Key Judgments (bands, % NAV, counts, closes) must equal the number in the section where it is calculated. Write the section first, then copy the value into the Bottom Line; never recompute it there.
-- **Claims about earlier reports** ("first time", "no prior report caught it", "new") are allowed only if the TRIGGERS history in the previous Handoff, or a report you actually opened this run, shows it. Otherwise leave the claim out.
-- **Top event coverage:** if the day's top event is an earnings release or a single stock, that stock's close, extended-hours mark and guidance must be pulled, or printed N/A with the reason. Every Mag 7 row needs a close and a day change.
+- **Source-or-N/A:** every market number needs a source page and the time it shows. None → `N/A`. Never a plausible, implied or derived value.
+- **Every "why" needs a source.** If no source states the cause of a move: `cause unconfirmed`.
+- **Dates on results:** a page dated before the session window is context, not a current mark. Gamma, IVR, Greeks and stress not refreshed this run get `STALE (as of …)`.
+- **Published closes:** set by the first AH (Mon–Thu) or WKND (Fri) report for that session. Every later report takes "prior close" from the latest `PUBLISHED CLOSES`. A fresh source that disagrees: keep the published number, add `(source now shows X)`.
+- **Continuity:** a benchmark moving > 2%, or a held name > 5%, vs the published close with no cited catalyst → search again. Still unresolved → benchmark: `UNVERIFIED`, out of Section 1. Held name: stays in, tagged `UNVERIFIED — check broker before acting`, never used as an order limit.
+- **✓✓** only when two independent pages agree (stock ±0.5%, index ±0.1%, yield ±2 bp, FX ±0.1%, commodity ±0.5%, BTC ±0.5%, VIX ±0.2).
+- **Calendar dates:** company IR, exchange, SEC or an official calendar of any age, or news ≤ 30 days old. Conflict → `date unconfirmed — check before expiry`.
+- **One value per item:** the same number everywhere. Section 1 copies values from the section that calculated them; never recompute.
+- **Claims about earlier reports** ("first time", "nobody caught it") only with evidence from the Handoff history.
 
-## 6. Formulas (show inputs; use code execution where available)
-- **Bands:**
-  - SPX daily 1σ = spot × (VIX1D ÷ 100) ÷ √252 (use VIX if VIX1D is missing).
-  - NDX daily 1σ = spot × (VXN ÷ 100) ÷ √252, labelled `30-day IV basis`.
-  - Weekly 1σ = spot × (VIX or VXN ÷ 100) × √(5/252).
-  - 2σ = 2 × 1σ. Centre the bands on the stated reference spot (the published close unless the text says otherwise).
-- **Cushion % (puts)** = (spot − strike) ÷ spot; negative means ITM. **Calls:** (strike − spot) ÷ spot.
-- **% captured** = (open credit − mark) ÷ open credit.
-- **Collateral:** naked = strike × 100 × qty; spread max loss = width × 100 × qty − credit.
-- **ROC:** naked = credit ÷ (strike × 100 × qty); spread = credit ÷ max loss. Annualized = ROC × 365 ÷ DTE at entry.
-- **Breakeven (put)** = strike − credit per share.
-- **Journal (WKND, AH):**
-  - Win rate = winners ÷ closed trades. Average win, average loss.
-  - Expectancy = win rate × average win − (1 − win rate) × average loss.
-  - Average % captured on winners. Average days held.
-  - Rule adherence % = closed trades with no rule broken ÷ closed trades.
-  - Cost of Indiscipline = sum of P&L on trades that broke a rule, plus open marks on rule-breaking positions opened this period.
-  - Under 10 closed trades in a setup: `n<10: no verdict`.
+## 6. Formulas (show inputs in the Appendix; use code execution)
+- **Bands:** SPX daily 1σ = spot × (VIX1D ÷ 100) ÷ √252 (VIX if VIX1D missing); NDX uses VXN; weekly = × √(5/252); 2σ = 2 × 1σ.
+- **Cushion (puts)** = (spot − strike) ÷ spot; negative = ITM. **% captured** = (credit − mark) ÷ credit.
+- **Expected move** into an event = front ATM straddle ÷ spot, or a sourced implied move. `inside expected move` when cushion < expected move.
+- **Collateral:** naked = strike × 100 × qty; spread max loss = width × 100 × qty − credit. **ROC:** naked = credit ÷ (strike × 100 × qty); spread = credit ÷ max loss; annualized × 365 ÷ DTE.
+- **Assignment exposure** = Σ strike × 100 × qty over ITM shorts expiring in the next 10 trading days; compare with buying power (`× BP`).
+- **Day P&L attribution:** per position, change in mark × 100 × qty (options) or change in price × shares (stock); rank the top 3 gains and losses; group by theme.
+- **Stress line:** SPX −2% ≈ Σ(Δ × 100 × qty × spot × −2% × β) using the deltas in the book source; label `approx., delta-only`. If deltas are missing: N/A.
+- **Journal analytics:** win rate, average win/loss, expectancy = win rate × avg win − (1 − win rate) × avg loss, average % captured, days held, rule adherence %, Cost of Indiscipline. Under 10 closed trades in a group: `n<10: no verdict`.
 
-## 7. Scorecard: each report grades what can actually be tested
+## 7. Benchmark & strategy scorecard
+- **Benchmarks:** QQQ, SPY and the CBOE PUT index (S&P put-write). Use published closes; PUT index N/A if not sourced. Price return unless a total-return source is cited.
+- **Book return is time-weighted:** daily r = (NAV_t − NAV_{t−1} − net deposits_t) ÷ NAV_{t−1}; period return = Π(1 + r) − 1. Net deposits come from the book source's transfers table; if transfers are missing, print `deposits UNVERIFIED` next to the return.
+- **NAV history:** every AH and WKND Handoff carries `NAV:` lines (date · NAV · net deposits). WKND rebuilds week, month and YTD from them. Missing days → say which.
+- **Also show:** max drawdown of the NAV series and the leverage line (short-put max loss ÷ NAV) so a return is never read without its risk.
+- **Strategy scorecard (WKND, full; AH, one line):** group by journal setup tag (`playbook.md`). Per group: realized P&L, open P&L, win rate, average % captured, capital used, return on capital, verdict 🟢 keep / 🟡 fix / 🔴 stop with one plain sentence. Plus the **money map:** top 3 sources of profit and of loss this month by position.
+
+## 8. Execution scorecard
 | Mode | Tape grade | Execution grade |
 |---|---|---|
-| PRE | none (the session hasn't opened). Print `Carry-in: N actions staged for today from <Ref>; overnight fills: <list or none>` | none |
-| MID | PRE posture, levels and Scenario Map, **and** the prior AH/WKND next-session Scenario Map, against cash-session prices since 09:30 ET | `Execution: X of Y PRE actions done` |
-| AH | the MID afternoon call and today's Scenario Maps against the close | `Execution: X of Y actions done today` (PRE + MID) |
-| WKND | last weekend's posture and Scenario Map against the week | `Execution: X of Y actions done this week` |
+| PRE | none. `Carry-in: N actions staged for today from <Ref>; overnight fills: …` | none |
+| MID | PRE posture + prior AH/WKND next-session scenario vs cash prices since 09:30 ET | `X of Y PRE actions done` |
+| AH | MID afternoon call + today's scenarios vs the close | `X of Y actions done today` |
+| WKND | last weekend's posture vs the week | `X of Y actions done this week` |
 
-- Tape grades: `HIT | PARTIAL | MISS | NOT TESTABLE`. A pre-market or after-hours mark never counts as a HIT.
-- Execution matches the Handoff `ACTIONS:` ids against the fills and working orders in the book source. Name each missed action.
-- Every mode also prints `Repeat triggers: n`.
+HIT / PARTIAL / MISS / NOT TESTABLE; never HIT on a pre-market or after-hours mark. Execution matches Handoff ACTIONS against fills and working orders. The grade line goes in Section 1; the detail goes in A1.
 
-## 8. Length and brevity
-- **Word caps** (excluding the verbatim feed): PRE 3,500 · MID 3,000 · AH 4,000 · WKND 6,000. Over budget, trim tables first, then Reads. Never cut Book Triggers or the order table.
-- **Bottom Line:** keep Posture / Book / Key levels / Top event / Action. `Action:` holds 5 orders at most, ranked by risk removed (REPEAT items first). Format each as `ticker · contract · side · qty · limit · rule`. The full order list goes in the mode's checklist or gameplan section.
-- **Shkreli Read:** 3 sentences at most, naming a book exposure or a trigger level; otherwise leave it out.
-- **Unchanged section:** one line, `No change since <Ref> — <key number>`.
-- **Tables:** 10 rows at most. **Exempt:** the 11-sector leaderboard, the Cross-Asset Dashboard, the WKND Tripwire Map, staged order tables and Book Triggers. Held-name tables otherwise show only rows that are triggered or have moved ±5%, plus a one-line summary of the rest.
-- **Formatting:** no backticks around numbers, tickers or times. Bold only labels and the Bottom Line. Link a ticker on its first mention only. No decorative emoji. State each number once and refer back with `(see §7)`.
-- **Tables:** no `**`, `*`, backticks or links inside table cells. Google Docs bolds the header row by itself, so markdown inside cells shows as literal symbols. Put emphasis in the text around the table instead.
-- **Line-by-line blocks** (the War Room Handoff, any verbatim feed text): put them inside a fenced code block (three backticks plus `text`). Single line breaks collapse into one paragraph outside a code block (tested 3 Nov 2026).
-
-## 9. War Room Handoff (closes every report; the next report reads it)
+## 9. War Room Handoff (A6, inside a ```text code block, one item per line)
 ```text
-WAR ROOM HANDOFF — <Ref> — <session date>
-FEED: <book source> as of <time>
+WAR ROOM HANDOFF — <Ref> — <session date> — Runner: <Claude|Gemini>
+FEED: <book source name> as of <time>
+CHECK: <N> short option lines · <M> stock lines · $<X> short-put notional
 ACTIONS (for <session date>):
 A1 · TICKER · contract · side · qty · limit · rule
-A2 · TICKER · contract · side · qty · limit · rule
 TRIGGERS:
-TICKER contract · rule · first flagged <date> · count n · open
-TICKER contract · rule · first flagged <date> · count n · cleared
-PUBLISHED CLOSES (<session date>):   (AH and WKND only)
-SPX … · NDX … · DJI … · RUT … · 10Y … · DXY … · Brent … · WTI … · Gold … · BTC … · VIX …
-held: TICKER $x · TICKER $x · …
+TICKER contract · rule · first flagged <date> · count n · open|cleared
+PUBLISHED CLOSES (<session date>):   (AH and WKND)
+SPX … · NDX … · DJI … · RUT … · QQQ … · SPY … · PUT … · 10Y … · DXY … · Brent … · WTI … · Gold … · BTC … · VIX …
+held: TICKER $x · …
+NAV:   (AH and WKND; last 10 sessions)
+<date> · <NAV> · <net deposits>
 HELD MOVERS (≥ 5%): … or None
 ```
-Write it inside a fenced code block (` ```text ` … ` ``` `), one item per line, so the line breaks survive the conversion to a Google Doc. Each ACTIONS item and each TRIGGERS item gets its own line.
 
-## 10. Source Notes and Integrity
-- **Provenance:** Works Cited must list every number used in the Bottom Line and Key Judgments as `value · what it is · source link · time shown on page`. Anything without a line here can't appear in those two sections.
-- Then print the Integrity line from `integrity.md`.
+## 10. Source notes and integrity
+- A5 lists every number used in Sections 1–3 as `value · what · link · time on page`. A number without a line can't appear in Sections 1–3.
+- Then the Integrity line from `integrity.md`.
 
-## 11. Save
-**One runner per mode.** Each mode has exactly one runner. Change this table if Wilson changes the split:
+## 11. Runner and save
+**One runner per mode** (change here if Wilson changes the split):
 
-| Mode | Runner | Why |
-|---|---|---|
-| PRE | Claude | sets the day's orders; needs the live book and pre-market quotes |
-| MID | Gemini | refresh of an existing plan; reads the MID WarRoom PDF |
-| AH | Claude | publishes the closes every later report reuses |
-| WKND | Claude | stress test, journal and repeat-trigger history |
+| Mode | Runner |
+|---|---|
+| PRE | Claude |
+| MID | Gemini |
+| AH | Claude |
+| WKND | Claude |
 
-- The second header line of every report includes `Runner: Claude` or `Runner: Gemini`.
-- If you are asked to run a mode that belongs to the other runner, run it only if the user explicitly asked in this conversation. A scheduled run of the wrong runner stops and replies `<mode> belongs to <runner>; not written`.
-- Never replace or trash a doc whose header shows the other runner. If one already exists for the same mode and day, stop and reply with its link.
+- The header shows the runner. A scheduled run for the other runner's mode stops: `<mode> belongs to <runner>; not written`. Run it only if Wilson asks directly in the conversation, and never replace a doc whose header shows the other runner.
+- **Doc title:** exactly `YYYY-MM-DD — <Report name>` with an em dash (—). Search `Market Reports` for that exact title; one doc per mode per day; re-runs are `(vN)`.
+- Native Docs headings, bold and tables. No markdown symbols inside table cells. The Handoff in a code block.
+- Read back the first 1,000 characters; literal `#`, `**`, backslashes or backticks, or a doc under 2 KB, means the save failed. Plain-text fallback: CAPITAL headings, `Label: value` lines, table rows as ` · `-separated lines.
+- Never leave an empty, duplicate, draft or test doc in `Market Reports`.
 
-1. Search `Market Reports` for the exact doc title. If it exists, update it in place and set the header to `Updated HH:MM ET / HH:MM ICT (vN)`. Never create a second doc with a time suffix.
-2. Write with native Docs headings, bold and tables.
-3. Read back the first 1,000 characters. If you see literal `#`, `**`, backslashes or backticks, or the doc is under 2 KB, the save failed.
-4. **Fallback** when the save tool only takes plain text: no markdown symbols at all. Put section headings in CAPITALS on their own line, write label lines as `Label: value`, and write tables one row per line with ` · ` between cells. Verify again.
-5. Never leave an empty, duplicate or test doc in `Market Reports`.
+## 12. Trade Journal rows (AH and WKND)
+- One row per fill. Columns in the sheet's order. **Dates as text** `YYYY-MM-DD` (prefix with an apostrophe if the tool would turn it into a number, e.g. `'2026-11-04`); never a serial number like 46329.
+- Setup tag from `playbook.md` (LC · BIO-A · BIO-B · BIO-C · WHEEL-CC · SHORT-STOCK · LOTTO · SCALP · INDEX · OTHER).
+- Rule check column: `Y` or `N (R#: reason)` using v2.5 numbers.

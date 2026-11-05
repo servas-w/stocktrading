@@ -1,43 +1,45 @@
 # WKND — Weekend Stock Market Report (job: STRATEGY & RISK)
 
-Stress-tests the book, grades the week's discipline, builds the Short Bench and maps the week ahead. **This report also grades Friday's session**, which covers Friday's AH duties: PUBLISHED CLOSES, Friday fills and the Trade Journal.
-- **Reads:** the Google Sheet `Trade Journal`, the week's War Room Handoffs (ACTIONS, TRIGGERS), the weekly and end-of-day book sources, the Held-Lot Plans doc, and the quote source.
+The week's story and why it happened, how the book did against QQQ and which strategies are working, the risks for next week and the week-ahead calendar. **It also closes out Friday:** PUBLISHED CLOSES, Friday's fills and the journal.
+- **Reads:** the Trade Journal sheet, the week's Handoffs (ACTIONS, TRIGGERS, NAV), the WEEKBOOK and the week's EOD book sources, the Held-Lot Plans doc, the quote source.
 - **Hands off to:** Monday's PRE.
-- **Runs:** Saturday about 10:00 ICT, after Friday's end-of-day and weekly audits.
-- **Budget:** about 35 data calls plus 8 for the Short Bench; ≤ 6,000 words plus the feed.
+- **Runs:** Saturday about 10:00 ICT, after Friday's EOD and weekly audits.
+- **Caps:** Section 1 ≤ 150 words · Section 2 ≤ 2,500 · Section 3 ≤ 500.
 
-## Checklist (after core steps 1–3 in the platform SKILL.md)
-- [ ] Scorecard: Tape grade for last weekend's posture and Scenario Map against the week; `Execution: X of Y actions done this week` (all ACTIONS Mon–Fri)
-- [ ] Book (batch D): weekly + Friday end-of-day book source → Book Map → full trigger scan; the week's end-of-day sources (missed harvest, days each lot has been flagged); Held-Lot Plans doc; covered-call quotes at or above basis for flagged lots the audit didn't quote (≤ 4 chains)
-- [ ] Friday close-out: PUBLISHED CLOSES for Friday; append Friday's fills to `Trade Journal`
-- [ ] Stress test: S1–S5 from the stress source in the platform SKILL.md (N/A if unavailable, never an estimate)
-- [ ] Journal: the core-rules §6 journal formulas on the week's closed trades (and year to date if the sheet allows)
-- [ ] Macro (batch A): weekly closes ✓✓; curve steepener/flattener; commodities, FX, digital assets; credit; Europe sovereign
-- [ ] Equities (batch B): 11 sectors by 5-day %; > $50B leaders/laggards; Mag 7 weekly; biotech readouts, PDUFA dates, congresses for held and watched names
-- [ ] Vol & screens (batch C): VIX, VVIX, VXN, term structure; gamma/OPEX walls (or N/A); weekly bands; put screener; Short Bench full build
-- [ ] Week-ahead calendar: CPI/PPI/jobs/PMIs/auctions, BMO/AMC earnings, Fed speakers and blackout (each date sourced per core-rules §5)
+## Data checklist (after core steps 1–3)
+- Friday close-out: PUBLISHED CLOSES for Friday; Friday's fills into the journal.
+- Book: WEEKBOOK + Friday EOD + CHECK → full trigger scan; S1–S5 stress from the WEEKBOOK (or N/A); held-lot plans due.
+- Performance: NAV lines from the week's Handoffs + transfers → week, month and YTD time-weighted return; QQQ, SPY, CBOE PUT index for the same periods; max drawdown; leverage line.
+- Strategy scorecard: closed trades from the journal by setup tag, open P&L from the book source.
+- Market: weekly closes and 5-day changes; 11 sectors; > $50B leaders/laggards; Mag 7; biotech readouts, PDUFA dates and conferences for held and watched names.
+- Week ahead: macro (CPI, PPI, jobs, PMIs, auctions), Fed speakers and blackout, earnings of held names and peers with expected move vs cushion, FDA dates, expiries, ex-dividend dates on covered calls.
 
-## Template (keep this numbering)
-Header + Metadata (`Ref: WK-<date>`) · Bottom Line · Scorecard (Tape + Execution + Repeat triggers) · Key Judgments (≤ 5)
-1. **Shkreli book autopsy & weekly macro/biopharma summary:** the week's driver vs the book's exposure; the positions nearest a trigger going into next week
-2. **Weekly closing ledger & cross-asset matrix:** Cross-Asset Dashboard (weekly comparators, `PUBLISHED CLOSE`), curve shifts, commodities/FX/crypto + Strategic Themes Desk (full, all four desks)
-3. **Sector dispersion & capital rotation:** 5-day leaderboard, cyclical vs defensive vs duration thesis
-4. **Large-cap leaders & laggards (> $50B) + Mag 7 weekly matrix:** breadth check `[Aggregate ≠ Breadth]`
-5. **Biotech pipelines & FDA catalyst roadmap:** `[Trial Design ≠ Clinical Efficacy]`; endpoints, control arms, dilution overhangs; held names and names with open puts first
-6. **Trade Journal analytics:** closed trades, win rate, average win/loss, expectancy, average captured %, days held, rule-adherence %, Cost of Indiscipline; harvested $ vs missed $; **Repeat-trigger table** (trigger · rule · first flagged · reports flagged · status)
-7. **Portfolio, risk limits & stress test:** Book feed line · Trigger scan line · feed verbatim · Greeks · Book Triggers · Tripwire Map (all names) + alert coverage · Theme Concentration (core-rules §3: R5 gross + net-of-hedge column) · Held-Lot Repair Desk (full) · S1–S5 stress table · risk-limits audit (`limit not set` where unset)
-8. **Options regime & screeners:** VIX/VVIX/term structure; gamma/OPEX walls (or N/A); weekly 1σ/2σ for SPX (VIX) and NDX (VXN); put screener (top 3 or the No-tickers line); **Short Bench, full build** (held shorts first, ≥ 1 per lane when a theme ≥ 5% NAV exists); Weekly Decision Gates
-9. **Week-ahead calendar:** macro releases, earnings, Fed speakers/blackout · Scenario Map (week ahead + Regime line, 1–3 months) · Indicators & Warning Signs
-10. **Works Cited** (Source Notes with provenance lines) + Integrity line
-War Room Handoff (core-rules §9, including Friday's PUBLISHED CLOSES; ACTIONS = Monday)
+## What goes in each slot
+**Section 1 — Summary:** the week in one sentence · book: week return vs QQQ and SPY, cash vs floor, positions needing action · `Execution: X of Y actions done this week` + the week's pattern · top 3–5 items.
+
+**Section 2 — Market & your book**
+- **2.1 The week's story:** what drove markets and why; each running story's chapter and what would end it.
+- **2.2 The week's movers:** your names (5-day), peers and sympathy, market leaders and laggards; biotech catalyst outcomes.
+- **2.3 Theme scorecard:** per theme: week move, driver, your exposure, net $ effect.
+- **2.4 Your book this week:**
+  - **Performance:** week, month and YTD vs QQQ, SPY and the PUT index; max drawdown; leverage. One sentence on why the book beat or lagged.
+  - **What's working and what isn't:** strategy scorecard summary (🟢 keep / 🟡 fix / 🔴 stop, one sentence each) and the money map (top 3 profit and loss sources this month).
+  - **Discipline:** rule breaks this week, the main pattern, Cost of Indiscipline.
+  - **Risk:** S1–S5 stress in one line (breaches flagged); next week's expiry and assignment exposure vs buying power; held-lot plans due (R7).
+- **2.5 Week ahead:** calendar in ET and ICT filtered to the book; scenarios (base, bull, bear with the level that confirms each); top 3 risks with early-warning signs.
+- **2.6 Opportunities:** 3–5 setups ready to underwrite, with IV gate status, plus the Short Bench in one line per lane (hedge, alpha). Labelled candidates only.
+
+**Section 3 — Action plan:** Monday orders (feed-row column filled), do-not-do list for the week, gates.
+
+**Appendix:** A1 book tables, tripwire map (all names), held-lot repair desk · A2 weekly dashboard, sectors, Mag 7, weekly bands · A3 benchmark tables (week, month, YTD) with the NAV series, strategy scorecard table, journal analytics, S1–S5 table, Short Bench full build · A4 Friday journal rows · A5 sources + Integrity · A6 Handoff (Friday PUBLISHED CLOSES, NAV lines, ACTIONS = Monday).
 
 ## Mode rules
-- Days flagged for a held lot = days since the first end-of-day source in which it crossed its threshold. Flag `Rule 7 deadline passed` after 7 days with no plan.
-- The Repeat-trigger table is the core of the weekly review: every trigger with a count ≥ 3 goes in the Bottom Line with its day count.
-- Short Bench spots come from the quote source or a timestamped page, never carried over from an earlier bench.
+- `n<10: no verdict` for any strategy with fewer than 10 closed trades.
+- Held-lot days flagged = days since the first EOD feed in which it crossed its threshold; `Rule 7 deadline passed` after 7 days.
+- The first scorecard rebuilds history from the journal and the book source; it never copies totals from older reports.
 
 ## Common mistakes
-- Estimating a stress-test number when no stress source is available (print N/A).
-- Building the Short Bench without the multiple-expansion gate (refiners on crack spreads are fundamentals).
-- Stating calendar dates that no source gave you (say "check whether earnings land before expiry").
-- Short-bench spots that disagree with the book (on Oct 30 the MRNA/KOD/XBI spots conflicted with the 2 Nov report by 20–75%).
+- Estimating stress when no stress source exists (print N/A).
+- Comparing NAV change with QQQ without stripping deposits.
+- Calendar dates without a source.
+- Short Bench spots carried over from an older report.
