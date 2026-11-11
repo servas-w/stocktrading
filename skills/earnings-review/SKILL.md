@@ -17,6 +17,7 @@ Read-only research. Never place, modify, cancel or preview orders. Chat reply, n
 - Every number carries its period and source. If a figure cannot be found, write "unverified"; never estimate silently and never fill a gap from memory.
 - Call quotes must be verbatim from the transcript, with the speaker. No transcript available: say so and mark the call section "transcript unavailable" rather than reconstructing it from news summaries.
 - Compare like with like: GAAP to GAAP, adjusted to adjusted, same fiscal period, consensus as it stood before the print.
+- **EPS basis.** Sell-side consensus is usually adjusted EPS, and data feeds mix the two. Before computing any EPS beat, reconcile: adjusted net income / diluted shares should reproduce the "actual" the consensus source shows. State the basis in the scorecard header, show GAAP and adjusted EPS on separate rows, and compute the beat only on the row that matches the consensus basis. If the basis cannot be established, write "EPS beat unverified" and grade on revenue and guidance.
 - Separate facts (reported), management claims (said on the call) and your inference. Label inference.
 - A flag needs evidence and a size ("DSO 71 -> 84 days", not "receivables look high"). No evidence, no flag.
 
@@ -28,7 +29,7 @@ Tool names below were checked against the live connectors. Use what is connected
 |---|---|---|
 | Which quarter, report date, next date | Robinhood `get_earnings_results` | Latest row with a non-null `eps.actual` is the reported quarter; the null row is the next print (tentative if `verified` is false) |
 | Call transcript | Alpha Vantage `EARNINGS_CALL_TRANSCRIPT` (`quarter` = fiscal `YYYYQn`) | About 12k tokens per call, with per-paragraph sentiment. Quartr (`search_companies` -> `list_events` -> `read_transcript`) only if the account has Quartr Pro; it returned `subscription_required` when this skill was written, so do not retry it after one failure |
-| Press release, 10-Q, slides | Robinhood `get_sec_filing_index` / `get_sec_filing`; web for the IR deck | KPIs such as RPO, ARR, backlog and segment data live here, not in the standardized statements |
+| Press release, 10-Q, slides | Web search for the press release and the earnings slide deck first; Robinhood `get_sec_filing_index` / `get_sec_filing` / `get_sec_filing_facts` for the 10-Q once filed | The earnings 8-K often has no readable text on Robinhood (`filing_content_unavailable`): do not retry it. KPIs such as RPO, ARR, backlog and segment data live here, not in the standardized statements |
 | Statements, 8 quarters | Zacks `get_income_statement` / `get_balance_sheet` / `get_cash_flow` (`period: "Q"`, `periods: 8`); Alpha Vantage `INCOME_STATEMENT` / `BALANCE_SHEET` / `CASH_FLOW` | **Quarterly cash flow is fiscal year-to-date.** Subtract the prior YTD figure to get a single quarter before computing FCF, and say so |
 | Consensus, surprise, revisions | Zacks `compare_stocks` section `SEH` (EPS surprise history), `ETR` / `ERV` (revisions); Alpha Vantage `EARNINGS_ESTIMATES` (EPS and revenue consensus, 7/30/60/90-day-ago values) | See the consensus rule below. `EARNINGS_ESTIMATES` returns ~40 periods; read only the rows needed |
 | Peers | Zacks `compare_stocks` (2-5 tickers; section `PEERS` to find them, default `FOV` for margins) | One section per call |
@@ -39,7 +40,15 @@ Tool names below were checked against the live connectors. Use what is connected
 
 **Consensus rule.** Sources disagree (for one checked quarter the EPS estimate was 1.89 on Robinhood and 1.94 on Zacks and Alpha Vantage, which turns the same print into a 10.6% or a 7.7% beat). Pick one source for the whole scorecard, name it in the table header, and never mix sources within a row. Revenue consensus comes from Alpha Vantage `EARNINGS_ESTIMATES` or Zacks; Robinhood has EPS only.
 
-**Depth and budget.** Default: this quarter's transcript in full, the prior quarter's transcript for tone and guidance, statements for 8 quarters, peers by numbers only. `deep` adds the two closest peers' transcripts (their comments on the shared end market) and segment tables. If the print is less than 48 hours old, the transcript, 10-Q or post-print revisions may be missing: mark the report **PRELIMINARY** and list what is not yet available.
+**Depth and budget.** Default: this quarter's transcript in full, the prior quarter's transcript for tone and guidance, statements for 8 quarters, peers by numbers only. `deep` adds the two closest peers' transcripts (their comments on the shared end market) and segment tables.
+
+**Day-one path (print less than 48 hours old).** Alpha Vantage usually has no transcript until a day or two after the call, the 10-Q is not filed, the standardized statements still end at the prior quarter, and post-print revisions have not settled. Do this instead:
+1. Mark the report **PRELIMINARY** in the first line and list what is missing.
+2. Build the scorecard from the press release and slide deck found by search; cross-check each figure against a second source where possible and say when a number rests on one source.
+3. Reaction: use the after-hours or pre-market price with its timestamp, and say the regular session has not traded.
+4. Call section: if no verbatim transcript can be read, head it "transcript unavailable", give secondhand points as unverified bullets with their source, and use no quotation marks.
+5. If a page cannot be fetched because the host is blocked, stop after the second blocked host, name the hosts, and carry on from search results.
+6. End with: "Re-run `earning: TICKER` after <date + 2 days> for the full call section and settled revisions."
 
 ## Step 2: Write the report
 
@@ -51,7 +60,7 @@ One line: **quarter grade A-F**, **story: INTACT / WOBBLING / BROKEN**, **valuat
 - Story: **BROKEN** if any pillar in section 4 is broken; **WOBBLING** if any pillar wobbles or its KPI has deteriorated two quarters running; otherwise **INTACT**.
 
 ### 1. Scorecard
-Table: revenue, gross margin, operating margin, EPS (GAAP and adjusted), FCF, plus the 2-3 KPIs that matter for this business (see sector notes). Columns: actual, consensus, beat/miss %, YoY, QoQ. Then guidance: new guide vs prior guide vs street, and whether the raise is smaller than the beat (a hidden cut for the remaining quarters).
+Table header names the consensus source and the EPS basis. Rows: revenue, gross margin, operating margin, GAAP EPS, adjusted EPS (separate rows), FCF, plus the 2-3 KPIs that matter for this business (see sector notes). Columns: actual, consensus, beat/miss %, YoY, QoQ. Then guidance: new guide vs prior guide vs street, and whether the raise is smaller than the beat (a hidden cut for the remaining quarters).
 
 ### 2. Numbers: green and red flags
 Check each of these and report only the ones that fire, green or red, with the number:
@@ -60,6 +69,7 @@ Check each of these and report only the ones that fire, green or red, with the n
 - **Balance sheet tells**: DSO and receivables vs revenue growth; inventory vs sales; deferred revenue, RPO, backlog, book-to-bill; payables stretch; debt, maturities, interest cover; cash runway if burning.
 - **Dilution and capital allocation**: share count trend, SBC % of revenue, buybacks funded by debt, ATM or shelf activity, insider selling around the print.
 - **Margin direction**: gross and operating margin trend, incremental margin, where the leverage or the squeeze comes from.
+- **Leverage block** (always run it when net debt exceeds 2x annualised EBITDA, capex exceeds 50% of revenue, or interest exceeds 25% of operating income; otherwise one line saying it does not apply): interest expense vs operating income (coverage, and the QoQ direction), net debt / annualised EBITDA, capex / revenue, debt added in the quarter vs revenue added, next maturities and undrawn committed facilities, the guided interest expense for next quarter, and what management said about the cost or availability of new funding. For capital-heavy businesses treat EBITDA as flattering (depreciation is the real cost) and lead with operating margin. If the equity is effectively a claim on refinancing, say so in the verdict line.
 - **Disclosure changes**: KPI dropped, redefined or re-segmented; guidance range widened; metric moved from quarterly to annual; restatement, auditor or CFO change.
 
 ### 3. Call: green and red flags
@@ -107,6 +117,7 @@ Swap the KPIs and the flags to fit the business:
 - **Semis / hardware**: inventory days (own and channel), backlog, lead times, customer concentration, gross margin by mix.
 - **Banks / insurers**: NII and NIM, deposit beta, credit costs and reserves, CET1, combined ratio; skip EV multiples, use P/TBV and ROTCE.
 - **Consumer / retail**: comps (traffic vs ticket), inventory, promotions, gross margin, store economics.
+- **Capital-heavy build-outs** (AI cloud, data centres, telecom, utilities, shipping): backlog and its definition, contracted vs active capacity, capex vs guidance, interest vs operating income, debt added per quarter, funding sources; the leverage block is the main story.
 - **Energy / materials**: realised price, volumes, unit cost, capex, hedges, FCF at strip.
 
 ## Preview mode (`earning preview: TICKER`)

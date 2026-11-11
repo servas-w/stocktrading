@@ -21,7 +21,8 @@ Research only. Never place orders. No preamble; lead with the verdict. If the co
 - Also read the prior quarter's call so tone and guidance can be compared quarter on quarter.
 - Consensus figures differ between data providers. Use one named source for the whole scorecard and never mix sources within a row.
 - Quarterly cash flow in a 10-Q is fiscal year-to-date. Subtract the prior year-to-date figure to get a single quarter before computing FCF, and say so.
-- If the print is less than 48 hours old, the transcript, 10-Q or post-print estimate revisions may be missing. Mark the report PRELIMINARY and list what is not yet available.
+- EPS basis: sell-side consensus is usually adjusted EPS and data feeds mix the two. Before computing any EPS beat, reconcile (adjusted net income / diluted shares should reproduce the "actual" your consensus source shows). State the basis in the scorecard header, show GAAP and adjusted EPS on separate rows, and compute the beat only on the row that matches the consensus basis. If the basis cannot be established, write "EPS beat unverified" and grade on revenue and guidance.
+- Day-one path (print less than 48 hours old): the transcript, 10-Q and settled estimate revisions are usually missing. Mark the report PRELIMINARY in the first line and list what is missing. Build the scorecard from the press release and slide deck, cross-check each figure against a second source, and say when a number rests on one source. Use the after-hours or pre-market price with its timestamp. If no verbatim transcript can be read, head the call section "transcript unavailable", give secondhand points as unverified bullets with their source, and use no quotation marks. End with: "Re-run earning: TICKER after <date + 2 days> for the full call section and settled revisions."
 
 ## Report
 
@@ -31,7 +32,7 @@ Tables for numbers, short bullets for flags. Keep it to what changes a decision.
 - Grade: A = beat on revenue and EPS, guide raised above street, cash conversion confirms it, no red flag. B = beat with an in-line guide or one minor red flag. C = in line or mixed, or a low-quality beat (one-offs, tax, share count). D = miss on revenue or a guide cut. F = miss plus a cut plus a balance-sheet or disclosure red flag.
 - Story: BROKEN if any pillar in section 4 is broken; WOBBLING if any pillar wobbles or its KPI has deteriorated two quarters running; otherwise INTACT.
 
-**1. Scorecard** - table of revenue, gross margin, operating margin, EPS (GAAP and adjusted), FCF and the 2-3 KPIs that matter for this business. Columns: actual, consensus, beat/miss %, YoY, QoQ. Then guidance: new vs prior vs street, and whether the raise is smaller than the beat (a hidden cut for the remaining quarters).
+**1. Scorecard** - the table header names the consensus source and the EPS basis. Rows: revenue, gross margin, operating margin, GAAP EPS, adjusted EPS (separate rows), FCF and the 2-3 KPIs that matter for this business. Columns: actual, consensus, beat/miss %, YoY, QoQ. Then guidance: new vs prior vs street, and whether the raise is smaller than the beat (a hidden cut for the remaining quarters).
 
 **2. Numbers: green and red flags** - check each, report only the ones that fire, with the number:
 - Quality of the beat: organic vs acquired vs FX; price vs volume; one-offs, tax rate, share count or below-the-line items doing the work; pull-forward.
@@ -39,6 +40,7 @@ Tables for numbers, short bullets for flags. Keep it to what changes a decision.
 - Balance sheet: DSO and receivables vs revenue growth; inventory vs sales; deferred revenue, RPO, backlog, book-to-bill; payables stretch; debt, maturities, interest cover; cash runway if burning.
 - Dilution and capital allocation: share count trend, SBC % of revenue, debt-funded buybacks, ATM or shelf activity, insider selling around the print.
 - Margins: gross and operating trend, incremental margin, source of the leverage or squeeze.
+- Leverage block (always run it when net debt exceeds 2x annualised EBITDA, capex exceeds 50% of revenue, or interest exceeds 25% of operating income; otherwise one line saying it does not apply): interest expense vs operating income (coverage and QoQ direction), net debt / annualised EBITDA, capex / revenue, debt added in the quarter vs revenue added, next maturities and undrawn committed facilities, guided interest expense for next quarter, and what management said about the cost or availability of new funding. For capital-heavy businesses treat EBITDA as flattering (depreciation is the real cost) and lead with operating margin. If the equity is effectively a claim on refinancing, say so in the verdict line.
 - Disclosure changes: KPI dropped, redefined or re-segmented; guidance range widened; restatement, auditor or CFO change.
 
 **3. Call: green and red flags**
@@ -78,6 +80,7 @@ End with a Sources list (every source, with links, and one line on anything mark
 - Semis / hardware: inventory days (own and channel), backlog, lead times, customer concentration, mix.
 - Banks / insurers: NII and NIM, deposit beta, credit costs, CET1, combined ratio; use P/TBV and ROTCE, not EV multiples.
 - Consumer / retail: comps (traffic vs ticket), inventory, promotions, store economics.
+- Capital-heavy build-outs (AI cloud, data centres, telecom, utilities, shipping): backlog and its definition, contracted vs active capacity, capex vs guidance, interest vs operating income, debt added per quarter, funding sources; the leverage block is the main story.
 - Energy / materials: realised price, volumes, unit cost, capex, hedges, FCF at strip.
 
 ## Preview mode (`earning preview: TICKER`)
