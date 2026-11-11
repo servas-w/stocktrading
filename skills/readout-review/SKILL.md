@@ -19,6 +19,7 @@ The post-event counterpart of `BIO:`. `BIO:` underwrites the bet before the data
 - **Primary sources first**: the company press release and slide deck, the conference abstract or paper, the ClinicalTrials.gov record, the 8-K and latest 10-Q. News summaries are a last resort and are labelled as such.
 - Every number carries its arm, population, timepoint and source. If a figure was not disclosed, write "not disclosed". If it cannot be found, write "unverified". Never fill a gap from memory or from what the class usually shows.
 - **The registered endpoint is the result.** Grade against the primary endpoint and analysis population as registered before the data, not the endpoint the press release leads with.
+- **The powering assumption is rarely in the registry.** ClinicalTrials.gov gives endpoints, N and dates, not the effect size the trial was powered to detect. Look for it in earlier company slides, the 10-K, a protocol or design paper. If it is not public, write "powering assumption not disclosed" and grade against the target the company stated before the data and the competitor bar instead. Never invent one.
 - Quotes are verbatim with the speaker, or they are not quoted.
 - Separate what was reported, what management claims, and your inference. Label inference.
 - Cross-trial comparisons are indicative only: say what differs (population, line of therapy, endpoint definition, follow-up, assessment method) every time one is made.
@@ -33,25 +34,31 @@ Use what is connected; fall back to web search for anything missing and say whic
 | Need | Use | Notes |
 |---|---|---|
 | The result | Web search for the press release, 8-K exhibit, slide deck, abstract | Robinhood `get_sec_filing_index` to find the 8-K; its text is often unreadable there, so do not retry a failed filing |
-| What was promised | Clinical Trials `search_by_sponsor` / `search_trials` -> `get_trial_details` (primary and secondary endpoints, N, arms, analysis population, dates, amendments) | Compare the registered primary endpoint with the one in the press release |
-| The bar | Clinical Trials `analyze_endpoints` and web search for standard-of-care and competitor data in the same setting; Scite `search_literature` for the pivotal papers | Label every cross-trial comparison |
+| What was promised | Clinical Trials `search_trials` with `intervention` = the drug name (most reliable: the registered sponsor is often a subsidiary or the partner, so `search_by_sponsor` on the listed company can miss it) -> `analyze_endpoints` with the `nct_id` for primary and secondary endpoints, `get_trial_details` for design, N and dates | The registry shows the current record only: no powering assumption and no change history. Compare the registered primary endpoint with the one in the press release |
+| The bar | Web search for standard-of-care and competitor data in the same setting (labels, pivotal press releases, papers); Clinical Trials `search_trials` by `condition` to list competitor trials | Label every cross-trial comparison. Scite `search_literature` is for `deep` only: it requires formal references and a citation report, so follow its rules when used |
 | Cash, debt, shares | Robinhood `get_sec_filing_facts` on the latest 10-Q; later 8-K / 424B5 for raises | Fully diluted, per the ground rule |
 | Price and reaction | Robinhood `get_equity_quotes`, `get_equity_historicals` (close before the event to latest; after-hours with timestamp) | |
 | Options state | Robinhood `get_option_chains` / `get_option_quotes` | IV before vs after if recoverable; else "unverified" |
 | Wilson's exposure | Robinhood `get_equity_positions`, `get_option_positions`; Robinhood watchlist "Biotech Sentinel" | Read-only. Covers both the name and read-through names |
 | Prior view | Google Drive `search_files` for a prior `BIO:` card, readout note or journal entry on the ticker | If found, show its PoS and floor next to the rebuilt "before"; if they differ, say why. If none, rebuild fresh and say so |
 
-**Floors and SOTP use the `BIO:` definitions.** If the biotech-options-master-engine skill is installed, run its `underwrite.py bio` twice with no `short` block (once with the pre-event pipeline, once with the post-event pipeline) so both skills print the same Floor A / Floor B. If it is not available, use the fallback math in section 4 and label the floors "approximate, not the BIO calculator".
+**Floors and SOTP use the `BIO:` definitions.** If the biotech-options-master-engine skill is installed, run its `underwrite.py bio` twice with no `short` block, once for the pre-event state and once for the post-event state, so both skills print the same Floor A / Floor B. Checked against the calculator:
+- Pass `catalyst` in **both** runs: the event itself for "before", the **next** catalyst for "after" (A2 = net liquid less 1.5x quarterly burn for the quarters to the catalyst window end, so a missing or different window changes the floor).
+- Lead entry: `{"name":..,"lead":true,"pivotal_positive":true|false}`. The lead enters the SOTP only when `pivotal_positive` is true and `catalyst.efficacy_readout` is explicitly false; setting `stage` on the lead does not put it in the floor.
+- Base and Bull need both `dcf` and `pos_loa`. The `dcf` keys are `patients`, `biomarker`, `line_share`, `list_price`, `gtn`, `penetration`, `years`, `wacc`, `multiple`; any other key is ignored silently and prints a $0 PV.
+- A failed program: remove it, or drop it one `stage` if a rescue trial is credible. Add post-event raises to cash and shares.
+- With no `short` the output ends in "FLOORS ONLY", a MODE line and a "MISSING ... expiry" line: ignore those; use the Shares, Floors, SOTP, Napkin DCF and Targets lines.
+If the calculator is not available, use the fallback math in section 4 and label the floors "approximate, not the BIO calculator".
 
 ## Step 2: Write the report
 
 Tables for numbers, short bullets for everything else. Keep it to what changes the value or a decision.
 
 ### 0. Verdict line
-One line: **result grade**, **thesis** (STRONGER / INTACT / DAMAGED / DEAD), **value per share before -> after**, **floor before -> after**, and the stock's move vs the modelled move (OVERREACTION / UNDERREACTION / FAIR).
+One line: **result grade**, **thesis** (STRONGER / INTACT / DAMAGED / DEAD), **Base value per share before -> after**, **floor before -> after**, and the stock's move vs the modelled move (OVERREACTION / UNDERREACTION / FAIR).
 
 Result grade:
-- **CLEAN WIN**: primary endpoint met on the registered analysis, effect at or above the trial's powering assumption and competitive with the bar, safety unremarkable.
+- **CLEAN WIN**: primary endpoint met on the registered analysis, effect at or above the trial's powering assumption (or, if undisclosed, the target the company stated beforehand) and competitive with the bar, safety unremarkable.
 - **WIN WITH ASTERISKS**: primary met, but at least one of: effect below the powering assumption or the competitor bar, a safety or tolerability signal, reliance on a subgroup or post hoc analysis, single-arm or investigator-assessed data, key numbers withheld.
 - **MIXED**: primary missed with a credible key secondary or pre-specified subgroup, one of several co-primaries met, or an inconsistent dose response.
 - **FAIL**: primary missed and nothing pre-specified rescues it, or a safety finding that ends the program.
@@ -76,7 +83,7 @@ Result grade:
 - **What was not disclosed**: list it. Omissions in a topline release are deliberate until shown otherwise.
 
 ### 2. Spin check
-- Headline claim vs the registered primary endpoint and population. Flag any change of endpoint, analysis population, timepoint or comparator, and whether it was made before unblinding (check the registry history and earlier 8-Ks).
+- Headline claim vs the registered primary endpoint and population. Flag any change of endpoint, analysis population, timepoint or comparator, and whether it was made before unblinding. Evidence comes from earlier press releases, 10-K trial descriptions and the registry's change history if it can be read; the current registry record alone cannot show a change, so if no earlier description is found write "endpoint history unverified".
 - Language tells: "clinically meaningful", "numerical trend", "in patients who", "nominal p", "encouraging", "supports advancement" with no number attached.
 - What management said on the call vs what the table shows; any question that got a non-answer.
 - Timing tells: data released after hours, bundled with a financing, or cut down to a subset; a raise priced within days.
@@ -123,14 +130,15 @@ One row per program and per other indication of the same molecule: stage, partne
 | Floor A | | |
 | Bear / Base / Bull | | |
 
-- Use the `BIO:` calculator for both columns when available (Step 1). Fallback: Floor = max(0, net liquid - burn to the next catalyst + SOTP residual) / FD shares, with the SOTP residual netted against debt first; label it approximate.
+- Use the `BIO:` calculator for both columns when available (Step 1). Fallback, same definitions: A1 = net liquid / FD shares; A2 = max(0, net liquid - 1.5 x quarterly burn x quarters to the next catalyst (minimum 1)) / FD shares; Floor A = A1 + SOTP residual per share; Floor B = A2 + SOTP residual per share. If debt exceeds cash, the SOTP fills that hole before equity gets anything. Label fallback floors approximate.
 - Bear = Floor B. Base = (net liquid + SOTP ex-lead + lead risk-adjusted PV) / FD shares. Bull = same with the lead unrisked. The lead's DCF replaces its ladder credit; never count both.
-- **The lead enters the floor only when de-risked**: positive pivotal data and no further efficacy readout pending. After a positive early or mid-stage readout the lead is still the bet and stays out of the floor.
+- **The lead enters the floor only when de-risked**: positive pivotal data and no further efficacy readout pending. After a positive early or mid-stage readout the lead is still the bet and stays out of the floor, so expect the floor to move little on a Phase 1 or 2 win: the gain shows up in Base and Bull. Say so, so a flat floor is not read as "nothing changed".
+- The distressed floor also depends on how far away the next catalyst is (more quarters of burn to fund lowers it). When the floor moves for that reason and not because of the data, say which.
 
 **e. Market reaction vs modelled move**
 - Modelled change = value per share after - before (Base case), plus the dilution effect of the expected raise.
 - Actual change = close before the event to the latest price, with timestamp.
-- **Market-implied odds before the event** (rough): (price before - fail value) / (success value - fail value), using your Bear and Base. Say whether the market was pricing a win, a coin flip or a fail, and whether the move is consistent with that.
+- **Market-implied odds before the event** (rough): (price before - fail value) / (success value - fail value). Success value = Base with the event transition set to 1; fail value = Floor B with the lead at zero (or one stage down if a rescue is credible). One of the two is the scenario that happened; build the other as the counterfactual. Say whether the market was pricing a win, a coin flip or a fail, and whether the move is consistent with that.
 - Verdict: OVERREACTION, UNDERREACTION or FAIR, with the gap in dollars per share. If enterprise value is above the unrisked PV, say it is priced for perfection.
 
 ### 5. Read-through to other names
