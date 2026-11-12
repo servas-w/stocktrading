@@ -4,8 +4,8 @@
 Gems become read-only on 17 Nov. On 17 Dec, Google turns each remaining Gem into a skill automatically. If the four old report Gems are still there by then, they come back as four competing skills that all write to `Market Reports`. Delete them, or at least their instructions, before then.
 
 ## 2. Install
-1. Build the package from the repo root with `skills/build_gemini_skill.sh`, or use `skills/market-alpha-reports-gemini.zip`.
-2. In Gemini, go to Skills → Add skill and upload the **folder** `dist/gemini/market-alpha-reports` (best). Or upload the zip; its root holds `SKILL.md`, `modes/` and `references/`.
+1. Build the package from the repo root with `skills/build_gemini_skill.sh`, or use `skills/market-alpha-reports-gemini.zip`. The source is `skills/market-alpha-reports-gemini/` (self-contained; it no longer shares files with the Claude edition).
+2. In Gemini, go to Skills → Add skill and upload the zip, or the **folder** `dist/gemini/market-alpha-reports`.
 3. Make sure Gemini can use Google Drive, Docs, Sheets and Search.
 4. To update later, go to More → Replace skill and upload the new folder.
 
