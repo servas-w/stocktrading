@@ -11,7 +11,7 @@ Goal: the War Room's compliance check at about a third of the compute. Pull only
 - **Read-only.** Never place, cancel or replace orders. Stage tickets only: `STAGE: BTC <qty> <TICKER> <EXP> <STRIKE>P @ <= $x GTC - reason (Rule #)` or `STAGE: CANCEL STO ... - reason (Rule #)`.
 - **Robinhood MCP only** for data. No Gmail/Drive search for confirmations.
 - **Mask accounts:** main book ••6081 (account_number 5QR66081). Shadow Delta ••1686 was empty on 2026-09-29; skip it unless the user asks.
-- **Budget: ≤ 12 data calls** (≤ 14 with the overflow quote calls in 7 and 8; EOD may add call 13, so ≤ 15). The Drive upload doesn't count. Hitting it = stop and mark the rest UNVERIFIED.
+- **Budget: ≤ 12 data calls** (≤ 14 with the overflow quote calls in 7 and 8; EOD may add call 13, plus 13b on an expiration day, so ≤ 16). The Drive upload doesn't count. Hitting it = stop and mark the rest UNVERIFIED.
 - **One run per chat.** Start a new chat for every run (two per day).
 
 ## Two runs a day, plus an optional pre-market snapshot (pick the mode from the Da Nang clock)
@@ -37,13 +37,13 @@ The user is in Da Nang (UTC+7) and runs this twice a day. Label every file by th
 - `tool_search "get_banking_transactions"` (EOD only)
 - `tool_search "Google Drive create_file upload"`, then call **whichever `create_file` the search returns** (the prefix differs by install; never type a full tool name from memory)
 
-## Data calls (≤ 12, or 13 at EOD; two parallel turns; calls 10 and 13 at EOD only)
+## Data calls (≤ 12; two parallel turns, then at EOD a third; calls 10, 13 and 13b at EOD only)
 **Turn 1 (parallel, 6):**
 1. `get_portfolio` (5QR66081) → NAV, cash, buying power.
-2. `get_option_orders` (5QR66081, `state: "filled"`, `created_at_gte: SESSION_START`) → fills of orders **created** this session. **Never pull all states**: cancelled orders were ~80% of the tokens in the first run.
+2. `get_option_orders` (5QR66081, `state: "filled"`, **`updated_at_gte: SESSION_START`**) → every option order that filled this session, **including GTCs created on earlier days** (verified 18 Nov 2026: a GTC BTC created 16 Nov showed up when it filled on 18 Nov). Keep only executions with `trade_date` = session date. Each leg carries `option_id`, `strike_price`, `expiration_date`, `option_type`, `side` and `position_effect` (open/close); each order carries `opening_strategy` / `closing_strategy`, `time_in_force` and `created_at`. A filled order with `created_at` < SESSION_START = `GTC fill, order created earlier`. **Never pull all states**: cancelled orders were ~80% of the tokens in the first run.
 3. `get_option_orders` (5QR66081, `state: "confirmed"`, `created_at_gte: SESSION_START`) → new working orders (GTCs, resting STOs).
-4. `get_option_positions` (5QR66081, `nonzero: true`) → book. `pending_buy_quantity` > 0 on a short = a working BTC exists. `created_at` ≥ SESSION_START = a position opened this session.
-5. `get_pnl_trade_history` (5QR66081, `span: "week"`; **`span: "month"` at EOD**, for the month-to-date close stats) → keep only rows dated in the session for the fills; at EOD keep the month-to-date rows for the close stats. **This catches GTCs created on earlier days that filled this session**: `created_at_gte` filters on when an order was created, so call 2 misses them, and they are exactly the 50% GTC buy-to-closes Rule 2 produces.
+4. `get_option_positions` (5QR66081, `nonzero: true`) → book. `pending_buy_quantity` > 0 on a short = a working BTC exists. `opened_at` ≥ SESSION_START = a position opened this session (the field is `opened_at`; positions have no `created_at`).
+5. `get_pnl_trade_history` (5QR66081, `span: "week"`; **`span: "month"` at EOD**, for the month-to-date close stats) → realized gain per closing trade. **Rows carry only `timestamp`, `symbol` (the underlying), `side`, `quantity`, `price` and `realized_gain`: no strike, expiry, option type or asset class** (verified 18 Nov 2026). Option rows price per contract (`-125` = $1.25); stock rows price per share; a negative-quantity `buy` at a stock-level price is a short-stock cover; a multi-leg close is one row with an empty `side` and the net price. Tie each row to its order by symbol + timestamp (within 2 s of the order's last execution) + |qty|; a row with no option order behind it is a stock trade (call 9). At EOD keep only rows with `timestamp` ≥ the 1st of the month for the stats; if `next_cursor` is not empty, fetch **one** more page at most and, if it's still not empty, label the stats `MTD (partial, from <oldest date>)`.
 6. `get_equity_positions` (5QR66081) → held lots (quantity, average cost; negative quantity = short stock).
 
 **Turn 2 (parallel, 5; up to 7 at EOD):**
@@ -53,15 +53,17 @@ The user is in Da Nang (UTC+7) and runs this twice a day. Label every file by th
 10. **EOD only:** `get_banking_transactions` (last 7 days) → rows that move money between the Robinhood bank account and the brokerage, for the reports' QQQ benchmark (A8). The connector can't see external deposits or wires straight into the brokerage, so A8 always ends with `external deposits not visible to the connector`. Also add **QQQ and SPY** to call 8's symbol list.
 11. `get_option_instruments` (ids of every option position from call 4, batched) → the **exact** strike, expiry and type of every line. Never print a strike worked out from a quote when this call returned it.
 12. `get_equity_fundamentals` (every A3/A4 underlying missing from `universe.md`) → market cap and sector for the class auto rule.
-13. **EOD only, and only if needed:** `get_option_orders` (5QR66081, `state: "filled"`, `created_at_gte` = session date − 120 days) → the opening fill (credit and date) of each contract closed this session. Skip it when the call-5 rows already carry the opening price and date. Match on symbol + strike + expiry + type; take the latest opening fill before the close. Any close still without opening data gets realized P&L only (from call 5), with velocity and return on risk printed `UNVERIFIED`. **Never pull all order states.**
+**Turn 3 (EOD only, after turn 1; parallel, 1–2):**
+13. `get_option_positions` (5QR66081, **`option_ids`** = every `option_id` on a close leg in call 2; leave out `nonzero`) → the closed positions, which keep **`average_price`** (opening credit × 100, negative for a short) and **`opened_at`** (verified 18 Nov 2026 on three closed shorts). This gives the credit and opening date for velocity and return on risk. Skip it if nothing closed.
+13b. **Expiration days only** (the session date is an option expiry, normally a Friday): `get_option_positions` (5QR66081, `expiration_date: SESSION_DATE`, leave out `nonzero`) → every contract that expired today. Quantity 0 with no close leg in call 2 = **expired or assigned**; a non-zero `pending_expiration_quantity` or `pending_assignment_quantity` = not processed yet, print `pending`.
 
-**Fill reconciliation:** session fills = call 2 ∪ the closing rows from call 5 (dedupe on symbol + strike + expiry + qty + price; tag call-5-only rows "GTC fill, order created earlier"). New positions from call 4 with no matching opening fill = a resting STO created earlier that filled this session: list them as opening fills too. Call 5 shows realizing trades only, so this positions check is the only way to see those.
+**Fill reconciliation:** session fills = call 2 (it already includes GTCs created earlier). Use call 5 only for realized gain, tied to orders as described under call 5. New positions from call 4 with no matching opening fill = a resting STO created earlier that filled this session: list them as opening fills too.
 
 **Field notes:**
 - **Tickers exactly as the API returns them.** Never normalize or "correct" a symbol (MRVI is not MRVL; the 4 Nov PDF printed MRVI as MRVL and showed a false −$18,193 loss).
 - Strike, expiry and type come from call 11. Only if that call fails for a line: put = break_even + mark, call = break_even − mark, rounded to the nearest listed increment, and the row is tagged `strike inferred` (the reports never stage an order on it). Greeks null/zero on an ITM contract → treat Δ as −1.0 (puts) and say so.
 - Credit per share = |position `average_price`| ÷ `trade_value_multiplier` (100). Sanity-check it against the mark; if the ratio is implausible (> 50× or < 0.02×), mark velocity UNVERIFIED for that short rather than guess.
-- % captured = (credit − mark) ÷ credit. % of DTE elapsed = (today − position `created_at`) ÷ (expiry − position `created_at`).
+- % captured = (credit − mark) ÷ credit. % of DTE elapsed = (today − position `opened_at`) ÷ (expiry − position `opened_at`).
 - **Class per name** comes from the project file `universe.md`: BIO/SC (biotech, small-cap) or LC/MC (large-cap, mid-cap). BIO names get the biotech rules (Rules 4, 5 sleeve, 7 at 15%); LC/MC get the large-cap rules (Rule 7 at 25%). Floor B comes from `floors.md` (stale after 90 days → UNVERIFIED). A name missing from universe.md (or universe.md unreachable, as in cloud runs) → **auto rule** from call 12: market cap < $2B, or a biotech/pharma name < $10B → BIO/SC; otherwise LC/MC; tag `class (auto)` and print the line to add (`TICKER | class`). No market cap either → LC rules, `class? UNVERIFIED`.
 - **OPP** = a short opened with < 30 DTE. It's allowed (Rule 3) but tagged OPP on every table. OPP is exempt from the Rule 9 DTE window, still answers to Rules 1, 4, 5 and 7, and an OPP at ≤ 7 DTE counts toward the Rule 9 scalp cap (≤ 1% of NAV at risk across all scalps). At-risk per OPP put = (strike − credit) × 100 × qty, or the spread width minus credit for a spread.
 
@@ -81,45 +83,50 @@ The user is in Da Nang (UTC+7) and runs this twice a day. Label every file by th
 | — | **1 IV gate / 6 Earnings** | Not pulled in lean mode. R6 note: BIO/SC Mode A/B premium into a catalyst is allowed | UNVERIFIED |
 
 ## Close review (EOD only)
-MID and PRE runs skip this section: MID lists closes in the fills table only. EOD reviews **every close in the session**, using data already pulled (calls 2, 4, 5, 6, 7, 8, 9, 11), plus call 13 if needed.
+MID and PRE runs skip this section: MID lists closes in the fills table only. EOD reviews **every close in the session**, using data already pulled (calls 2, 4, 5, 6, 7, 8, 9, 11) plus calls 13 and 13b.
 
-**1. Find and classify each close.**
+**1. Find, group and classify each close.** A close is an option leg with `position_effect: close` in call 2, a contract from call 13b that went to zero with no close leg, or a stock row in call 5 / call 9. **Group** every close of the same contract (or the same stock line) in the session into one entry: three 1-lot sells of the same put are one close of 3.
 | Type | How to detect it |
 |---|---|
-| **Profit-take** | BTC filled below the opening credit. Tag `GTC` if the order was created before the session (call-5-only row) |
-| **Defense close** | BTC filled at or above the opening credit, or any BTC on a name whose R3/R4 trigger was hit |
-| **Roll** | A close plus an opening fill on the **same underlying in the same session** (one multi-leg order, or two tickets). Score both legs as **one combined trade**, not as a close and a new position |
-| **Dead penny** | BTC at ≤ $0.05 |
-| **Expired** | A call-5 expiration row, or a short whose expiry was the session date that is now missing from call 4 with no BTC. Realized = full credit |
-| **Assigned** | A call-5 assignment row, or new shares in call 6 (qty = 100 × contracts, average cost ≈ strike) on a name where a short put was open. If neither shows, print `expiries/assignments UNVERIFIED` |
-| **Stock exit** | A shares sale from call 9. Compare it with the lot's average cost |
-| **Long close** | STC of a long option (wing, LOTTO or debit spread). Realized = proceeds − debit |
+| **Profit-take** | Short closed (`closing_strategy` short_put / short_call / a credit spread) below the opening credit. Tag `GTC` if the order's `created_at` < SESSION_START |
+| **Loss close** | Short closed at or above the opening credit |
+| **Roll** | A short closed **and** a short of the same option type opened on the same underlying in the same session, with the new expiry on or after the old one: either one multi-leg order (a close leg and an open leg) or two tickets. Score both legs as **one combined trade**. Long-leg churn (long closed, long reopened) and new structures on the same name (e.g. a calendar) are **not** rolls |
+| **Dead penny** | Short closed at ≤ $0.05 |
+| **Expired** | From call 13b: quantity 0 and no close leg. Realized = full credit (short) or full debit lost (long) |
+| **Assigned** | From call 13b, with new shares in call 6 (qty = 100 × contracts, average cost ≈ strike) or a call-5 share row at 16:00 ET on that name. If 13b shows `pending`, print `assignment pending` |
+| **Long close** | Long option sold to close (`closing_strategy` long_put / long_call): tag WING (a short on the same name stays open or closed in the same order) or LOTTO |
+| **Short cover** | A call-5 row with negative quantity and side `buy` at a stock-level price (short stock bought back, R11) |
+| **Stock exit** | A long share sale from call 5 / call 9 |
 
 **2. Metrics for each close** (credit and close price per share; qty = contracts):
-- **Realized $** = (credit − close) × 100 × qty. Prefer call 5's realized figure; if the two differ by more than $1, print both.
+- **Credit** = |call-13 `average_price`| ÷ 100. Cross-check it against call 5: credit ≈ close + realized ÷ (100 × qty). If the two differ by more than $0.02, print both and tag `credit?`.
+- **Realized $** = call 5 `realized_gain` (summed over the grouped rows). If no call-5 row matches, use (credit − close) × 100 × qty and tag `calc`.
 - **% of credit kept** = (credit − close) ÷ credit.
-- **Days held** (at least 1) and **planned DTE**, both counted from the opening fill date. **Velocity** = % of credit kept ÷ % of DTE elapsed.
-- **Return on risk (RoR)** = realized ÷ max loss at entry. Max loss for a put = (strike − credit) × 100 × qty; for a spread = (width − credit) × 100 × qty. **Annualized** = RoR × 365 ÷ days held.
+- **Days held** (at least 1) = session date − `opened_at`; **planned DTE** = expiry − `opened_at`. **Velocity** = % of credit kept ÷ (days held ÷ planned DTE).
+- **Return on risk (RoR)** = realized ÷ max loss at entry. Max loss for a put = (strike − credit) × 100 × qty; for a spread = (width − credit) × 100 × qty. **Annualized** = RoR × 365 ÷ days held, printed only when days held ≥ 7 (shorter holds print `n/m`).
 - **Remaining reward/risk at close** = close ÷ (strike − close), or close ÷ (width − close) for a spread. This is what was given up versus what was still at risk. Under 5% means the close is justified on reward/risk alone, whatever happens next.
 - **Price improvement** = limit − average fill price, when the order shows both.
 - **Hindsight** = mark now (call 7) − close price, × 100 × qty. Tag it `noise, not graded` and never use it in the grade.
 - **Roll (combined):** net roll credit = new credit − close debit. Print old → new strike and expiry, days added, and **combined P&L** = realized on the old leg + net roll credit. RoR uses the max loss of the new leg.
+- **Short cover / stock exit:** realized $ and % vs entry (from call 5), days held when the lot's opening date is visible, else `n/a`.
+- **Trigger at close:** R3/R4 are tested with the EOD spot (call 8) and the closed contract's EOD Delta (call 7), not the price at the moment of the close. Say so whenever the grade depends on it.
 
-**3. Process grade.** The grade scores whether the rules were followed, never the P&L. Print the outcome next to it separately: **Win**, **Scratch** (|realized| < 10% of credit) or **Loss**.
+**3. Process grade.** The grade scores whether the rules were followed, never the P&L. Print the outcome next to it separately: **Win**, **Scratch** (|realized| < 10% of credit, or < $10 for a long or stock close) or **Loss**.
 | Grade | When |
 |---|---|
-| **A** | Rule-driven: an R2 profit-take (≥ 50%, or velocity met), an R4 defense close or R3 ITM-at-21-DTE close within 1 session of the trigger, a dead-penny cleanup, a roll down and/or out for a net credit whose new leg passes R4, R5 and R9, or an expiry where a working BTC sat unfilled |
-| **B** | The right action but late: ≥ 80% captured or mark ≤ $0.05 before closing (held past target); a defense or ITM close in the 2nd session after the trigger (the MID file flagged it); an expiry or assignment with no working BTC (R2 miss, survived pin risk); an LC/MC assignment at a strike inside the R7 limits |
-| **C** | Discretionary: a close under 25% captured with no rule trigger (premature exit); a roll for a net debit; a roll whose new leg breaks R5, R9 or OPP limits; a stock sale at a loss with no written exit level |
-| **D** | A rule breach on the exit: a loss close with **no defense trigger hit** (panic exit); a close after a trigger was ignored for ≥ 3 sessions; dumping assigned shares within ≤ 5 sessions (R7); a same-session open and close of a contract ≤ $0.20 (R10); closing a wing while its short stays open; a BIO/SC assignment above Floor B (R7) |
-If a rule input is missing (Floor B stale, trigger history not visible), give the grade with `?` and list it under UNVERIFIED.
+| **A** | Rule-driven. Shorts: a GTC fill at the R2 target (limit at ≥ 50% captured and ≤ 80%), a manual close with velocity met (≥ 2× and ≥ 25%), an R4 defense or R3 ITM-at-21-DTE close, a roll for a net credit whose new leg passes R4, R5 and R9, or an expiry while a working BTC sat unfilled. Longs: a WING closed together with (or after) its short, or a LOTTO sold at ≥ 2× its debit. Short covers: a cover at or before the R11 stop (entry × 1.15) |
+| **B** | Right action, late or loose: a close at > 80% captured or a dead-penny buyback **without** a GTC at the R2 target (held past target), including a GTC whose limit was set above 80% captured; an expiry or assignment with no working BTC (R2 miss, survived pin risk); an LC/MC assignment inside the R7 limits; a short cover after spot went past the R11 stop |
+| **C** | Discretionary: a short closed under 25% captured with no rule trigger (premature exit); a roll for a net debit; a roll whose new leg breaks R5, R9 or OPP limits; a LOTTO or long sold at a loss; a stock sale at a loss with no written exit level |
+| **D** | A rule breach on the exit: dumping assigned shares within ≤ 5 sessions (R7); any contract ≤ $0.20 both opened and closed this session (R10 penny scalping); closing a WING while its short stays open (creates a naked short); a BIO/SC assignment above Floor B (R7) |
+| **D?** | A short closed at a loss with **no R3/R4 trigger at EOD** (possible panic exit). Never assert panic: the trigger may have hit intraday, or the close may have been for an earnings or catalyst date (R6, not pulled in lean mode). Print `D?` and make it the Wendy question: "what was the trigger?" |
+If a rule input is missing (Floor B stale, R11 entry not visible), add `?` to the grade and list it under UNVERIFIED. Facts the lean run can't see (whether the MID file flagged a trigger, how many sessions a trigger was ignored) never change a grade; they go in the commentary as a question.
 
 **4. Verdict line** (one per close, ≤ 40 words, used in both the PDF and the chat):
 `<TICKER> <STRIKE><P/C> <EXP> <type>: <+/-$realized> (<% kept>) in <days>/<planned DTE>d, vel <x.x>x, RoR <y>% (<z>% ann.), R/R left <w>%. Process <grade>, <outcome>. <one-line why, citing the rule #>.`
-Example: `AAPL 180P 16Jan27 profit-take: +$412 (64%) in 19/75d, vel 3.4x, RoR 2.3% (44% ann.), R/R left 4%. Process A, Win. GTC 50% filled (R2).`
-A roll line uses `<old> -> <new>`, the net roll credit and the combined P&L.
+Example (the numbers are consistent): `AAPL 180P 16Jan27 profit-take: +$412 (64%) in 19/75d, vel 2.5x, RoR 2.4% (46% ann.), R/R left 1.3%. Process A, Win. GTC 50% filled (R2).` That's a credit of $6.44 closed at $2.32: 0.64 ÷ (19 ÷ 75) = 2.5; 412 ÷ ((180 − 6.44) × 100) = 2.4%; 2.32 ÷ (180 − 2.32) = 1.3%.
+A roll line uses `<old> -> <new>`, the net roll credit and the combined P&L. A short-cover or stock line uses `<TICKER> <shares> sh <type>: <+/-$realized> (<% vs entry>). Process <grade>, <outcome>. <why>.`
 
-**5. Month-to-date close stats** (from the call-5 month rows; no extra call): realized $, number of closes, win rate, average win vs average loss, profit factor (gross wins ÷ gross losses), and average days held where call 5 shows the opening date. Also the session's grade mix (e.g. `3A 1B 0C 1D`).
+**5. Month-to-date close stats** (from the call-5 rows dated this month; no extra call unless the second page is needed): realized $, number of closes, win rate, average win vs average loss, profit factor (gross wins ÷ gross losses), split options vs stock. Also the session's grade mix (e.g. `3A 1B 0C 1D 1D?`).
 
 ## PDF (narrative ≤ 2 pages, then the Appendix)
 - reportlab Platypus, **built-in Helvetica only, ASCII text** (write "Delta", "<=", "->"; no TTF embedding). Keeps the file small (~10 KB narrative, ~25 KB with the Appendix) so the base64 upload stays small.
@@ -134,7 +141,7 @@ A roll line uses `<old> -> <new>`, the net roll credit and the combined P&L.
   - **A6 Fills this session** (MID/EOD): time · ticker · contract or shares · side · qty · price · open/close · `GTC fill, order created earlier` tag.
   - **A7 Working orders:** ticker · contract · side · qty · limit · time in force · created time.
   - **A8 Transfers (EOD):** date · type (deposit / withdrawal) · amount, from call 10; `none` if there were none.
-  - **A9 Closes (EOD):** ticker · contract (or shares) · type · qty · open date · credit or debit · close price · realized $ · % kept · days held · planned DTE · velocity · RoR % · ann. RoR % · R/R left % · hindsight $ · process grade · outcome · roll link (the new contract for a roll). Then one line: `MTD: <n> closes · $<realized> · win <w>% · avg win $<a> / avg loss $<b> · PF <p>`. `none` if nothing closed.
+  - **A9 Closes (EOD):** ticker · contract (or shares) · type · qty · open date · credit or debit · close price · realized $ · % kept · days held · planned DTE · velocity · RoR % · ann. RoR % · R/R left % · hindsight $ · process grade · outcome · roll link (the new contract for a roll). Then one line: `MTD: <n> closes · $<realized> · win <w>% · avg win $<a> / avg loss $<b> · PF <p>` (or `MTD (partial, from <date>)`). `none` if nothing closed.
 - Filename: `WarRoom_<SESSION_DATE>_<n>-<TYPE>-<HHMM>.pdf` where TYPE is PRE, MID or EOD and HHMM is the run time in ET (e.g. `WarRoom_2026-11-04_2-EOD-1655.pdf`), in `/mnt/user-data/outputs/`. A re-run gets a new HHMM, so two files never share a name; the Gemini reports find their feed by the TYPE token and take the latest HHMM.
 
 ## Upload
